@@ -49,7 +49,7 @@ Saya telah **berhasil menambahkan** fitur Slip Gaji dan Sistem Izin (Tukar Hari,
 **Tables yang Dibuat:**
 - ✅ **permit_types** - Jenis-jenis izin
 - ✅ **permits** - Izin umum dengan approval
-- ✅ **day_exchanges** - Tukar hari kerja dengan weekend
+
 - ✅ **overtime_requests** - Pengajuan lembur dengan perhitungan
 - ✅ **leave_requests** - Pengajuan cuti enhanced
 - ✅ **permit_approvals** - Multi-level approval system
@@ -60,7 +60,7 @@ Saya telah **berhasil menambahkan** fitur Slip Gaji dan Sistem Izin (Tukar Hari,
 
 **Models yang Dibuat:**
 - ✅ **PermitType.php** - Jenis izin dengan validasi
-- ✅ **DayExchange.php** - Tukar hari dengan validasi hari kerja/weekend
+
 - ✅ **OvertimeRequest.php** - Lembur dengan perhitungan otomatis
 - ✅ **LeaveRequest.php** - Cuti enhanced dengan attachment
 
@@ -96,17 +96,9 @@ Saya telah **berhasil menambahkan** fitur Slip Gaji dan Sistem Izin (Tukar Hari,
 - ✅ **Summary Statistics** tahunan
 - ✅ **Help Section** dengan panduan lengkap
 
-### ✅ 2. Form Pengajuan Tukar Hari
-**File**: `resources/views/permits/day-exchange/create.blade.php`
 
-**Fitur Form:**
-- ✅ **Date Picker** dengan validasi hari kerja/weekend
-- ✅ **Real-time Validation** JavaScript
-- ✅ **Preview Section** untuk review sebelum submit
-- ✅ **Character Counter** untuk textarea
-- ✅ **Info Alert** dengan ketentuan lengkap
 
-### ✅ 3. Form Pengajuan Lembur
+### ✅ 2. Form Pengajuan Lembur
 **File**: `resources/views/permits/overtime/create.blade.php`
 
 **Fitur Form:**
@@ -116,9 +108,8 @@ Saya telah **berhasil menambahkan** fitur Slip Gaji dan Sistem Izin (Tukar Hari,
 - ✅ **Preview Section** dengan estimasi nominal
 - ✅ **Validation Rules** untuk maksimal 8 jam
 
-### ✅ 4. Daftar Pengajuan dengan Filtering
-**Files**: 
-- `resources/views/permits/day-exchange/index.blade.php`
+### ✅ 3. Daftar Pengajuan dengan Filtering
+**Files**:
 - `resources/views/permits/overtime/index.blade.php`
 
 **Fitur List:**
@@ -154,13 +145,7 @@ Saya telah **berhasil menambahkan** fitur Slip Gaji dan Sistem Izin (Tukar Hari,
 Route::prefix('permits')->name('permits.')->group(function () {
     Route::get('/', [PermitController::class, 'index'])->name('index');
     
-    // Day Exchange (Tukar Hari)
-    Route::prefix('day-exchange')->name('day-exchange.')->group(function () {
-        Route::get('/', [PermitController::class, 'dayExchangeIndex'])->name('index');
-        Route::get('/create', [PermitController::class, 'dayExchangeCreate'])->name('create');
-        Route::post('/', [PermitController::class, 'dayExchangeStore'])->name('store');
-        // ... CRUD lengkap
-    });
+
     
     // Overtime (Lembur) - CRUD lengkap
     // Leave (Cuti) - CRUD lengkap

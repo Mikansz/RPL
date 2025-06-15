@@ -7,10 +7,20 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Attendance;
 use App\Models\AttendanceRule;
 use App\Models\User;
+use App\Models\Schedule;
+use App\Models\Office;
+use App\Models\Shift;
+use App\Services\GeofencingService;
 use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
+    protected $geofencingService;
+
+    public function __construct(GeofencingService $geofencingService)
+    {
+        $this->geofencingService = $geofencingService;
+    }
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -64,26 +74,88 @@ class AttendanceController extends Controller
             ]);
         }
 
-        $clockInTime = now();
-        $rule = AttendanceRule::where('is_default', true)->first();
+        // Get or create schedule for today
+        $todaySchedule = $user->getTodaySchedule();
+        if (!$todaySchedule) {
+            // Auto-create schedule using employee's default settings
+            $todaySchedule = $user->getOrCreateTodaySchedule();
+            if (!$todaySchedule) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat membuat jadwal kerja. Pastikan Anda memiliki shift dan office default. Silakan hubungi HR.'
+                ]);
+            }
+        }
 
-        if (!$rule) {
+        // Enhanced location validation with geofencing
+        if (!$request->filled('latitude') || !$request->filled('longitude')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Aturan absensi tidak ditemukan.'
+                'message' => 'Lokasi GPS diperlukan untuk absensi.'
             ]);
         }
 
-        $lateMinutes = $rule->calculateLateMinutes($clockInTime);
-        $status = $lateMinutes > 0 ? 'late' : 'present';
+        $locationValidation = $this->geofencingService->validateScheduleLocation(
+            $request->latitude,
+            $request->longitude,
+            $user->id,
+            today()
+        );
+
+        if (!$locationValidation['valid']) {
+            return response()->json([
+                'success' => false,
+                'message' => $locationValidation['message'],
+                'location_data' => [
+                    'distance' => $locationValidation['distance'] ?? null,
+                    'required_radius' => $locationValidation['required_radius'] ?? null,
+                    'office' => $locationValidation['office'] ?? null
+                ]
+            ]);
+        }
+
+        // Track location for audit
+        $this->geofencingService->trackLocationHistory(
+            $user->id,
+            $request->latitude,
+            $request->longitude,
+            'clock_in'
+        );
+
+        $clockInTime = now();
+
+        // Use shift-specific timing to determine status
+        $shift = $todaySchedule->shift;
+        $attendanceStatus = $shift->calculateAttendanceStatus($clockInTime);
+
+        // Calculate minutes based on status
+        $lateMinutes = 0;
+        $earlyMinutes = 0;
+        $status = 'present'; // Default status
+
+        switch ($attendanceStatus) {
+            case 'early':
+                $earlyMinutes = $shift->calculateEarlyMinutes($clockInTime);
+                $status = 'early';
+                break;
+            case 'on_time':
+                $status = 'present';
+                break;
+            case 'late':
+                $lateMinutes = $shift->calculateLateMinutes($clockInTime);
+                $status = 'late';
+                break;
+        }
 
         $attendanceData = [
             'user_id' => $user->id,
             'date' => $today,
             'clock_in' => $clockInTime,
             'late_minutes' => $lateMinutes,
+            'early_minutes' => $earlyMinutes,
             'status' => $status,
             'clock_in_ip' => $request->ip(),
+            'office_id' => $todaySchedule->office_id,
         ];
 
         // Add location if provided
@@ -98,10 +170,32 @@ class AttendanceController extends Controller
             $attendance = Attendance::create($attendanceData);
         }
 
+        // Generate status message based on attendance status
+        $statusMessage = '';
+        switch ($status) {
+            case 'early':
+                $statusMessage = "Clock in berhasil - Terlalu dini {$earlyMinutes} menit";
+                break;
+            case 'late':
+                $statusMessage = "Clock in berhasil - Terlambat {$lateMinutes} menit";
+                break;
+            case 'present':
+            default:
+                $statusMessage = "Clock in berhasil - Tepat waktu";
+                break;
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Clock in berhasil.',
-            'data' => $attendance
+            'message' => $statusMessage,
+            'data' => [
+                'attendance' => $attendance,
+                'schedule' => $todaySchedule,
+                'work_type' => $todaySchedule->work_type,
+                'status' => $status,
+                'late_minutes' => $lateMinutes,
+                'early_minutes' => $earlyMinutes
+            ]
         ]);
     }
 
@@ -128,22 +222,47 @@ class AttendanceController extends Controller
             ]);
         }
 
-        $clockOutTime = now();
-        $rule = AttendanceRule::where('is_default', true)->first();
+        // Get or create today's schedule to use shift timing
+        $todaySchedule = $user->getTodaySchedule();
+        if (!$todaySchedule) {
+            // Auto-create schedule using employee's default settings
+            $todaySchedule = $user->getOrCreateTodaySchedule();
+            if (!$todaySchedule) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat membuat jadwal kerja. Pastikan Anda memiliki shift dan office default. Silakan hubungi HR.'
+                ]);
+            }
+        }
 
-        $earlyLeaveMinutes = $rule->calculateEarlyLeaveMinutes($clockOutTime);
-        $overtimeMinutes = $rule->calculateOvertimeMinutes($clockOutTime);
+        // Validate location for WFO clock out
+        if ($todaySchedule->isWFO()) {
+            if ($request->filled('latitude') && $request->filled('longitude')) {
+                if (!$todaySchedule->canClockInAtLocation($request->latitude, $request->longitude)) {
+                    $distance = $todaySchedule->getDistanceFromOffice($request->latitude, $request->longitude);
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Anda berada di luar radius kantor untuk clock out. Jarak Anda: " . round($distance) . " meter dari kantor " . $todaySchedule->office->name . "."
+                    ]);
+                }
+            }
+        }
+
+        $clockOutTime = now();
+        $shift = $todaySchedule->shift;
+
+        $earlyLeaveMinutes = $shift->calculateEarlyLeaveMinutes($clockOutTime);
+        $overtimeMinutes = $shift->calculateOvertimeMinutes($clockOutTime);
 
         // Calculate total work minutes
         $clockIn = Carbon::parse($attendance->clock_in);
         $clockOut = Carbon::parse($clockOutTime);
         $totalWorkMinutes = $clockOut->diffInMinutes($clockIn);
 
-        // Subtract break time if any
-        if ($attendance->break_start && $attendance->break_end) {
-            $breakStart = Carbon::parse($attendance->break_start);
-            $breakEnd = Carbon::parse($attendance->break_end);
-            $totalWorkMinutes -= $breakEnd->diffInMinutes($breakStart);
+        // Determine final status based on early leave and existing status
+        $finalStatus = $attendance->status;
+        if ($earlyLeaveMinutes > 0) {
+            $finalStatus = 'early_leave';
         }
 
         $updateData = [
@@ -151,6 +270,7 @@ class AttendanceController extends Controller
             'early_leave_minutes' => $earlyLeaveMinutes,
             'overtime_minutes' => $overtimeMinutes,
             'total_work_minutes' => $totalWorkMinutes,
+            'status' => $finalStatus,
             'clock_out_ip' => $request->ip(),
         ];
 
@@ -162,96 +282,194 @@ class AttendanceController extends Controller
 
         $attendance->update($updateData);
 
+        // Generate status message
+        $statusMessage = 'Clock out berhasil';
+        if ($overtimeMinutes > 0) {
+            $overtimeHours = floor($overtimeMinutes / 60);
+            $overtimeRemainingMinutes = $overtimeMinutes % 60;
+            if ($overtimeHours > 0) {
+                $statusMessage .= " - Lembur {$overtimeHours} jam";
+                if ($overtimeRemainingMinutes > 0) {
+                    $statusMessage .= " {$overtimeRemainingMinutes} menit";
+                }
+            } else {
+                $statusMessage .= " - Lembur {$overtimeRemainingMinutes} menit";
+            }
+        } elseif ($earlyLeaveMinutes > 0) {
+            $statusMessage .= " - Pulang awal {$earlyLeaveMinutes} menit";
+        } else {
+            $statusMessage .= " - Tepat waktu";
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Clock out berhasil.',
-            'data' => $attendance
+            'message' => $statusMessage,
+            'data' => [
+                'attendance' => $attendance->fresh(),
+                'schedule' => $todaySchedule,
+                'work_type' => $todaySchedule->work_type,
+                'status' => $finalStatus,
+                'overtime_minutes' => $overtimeMinutes,
+                'early_leave_minutes' => $earlyLeaveMinutes,
+                'total_work_minutes' => $totalWorkMinutes
+            ]
         ]);
     }
 
-    public function startBreak(Request $request)
+
+
+    public function getTodayAttendance()
+    {
+        try {
+            $user = Auth::user();
+            $attendance = Attendance::where('user_id', $user->id)
+                                    ->where('date', today())
+                                    ->first();
+
+            $todaySchedule = $user->getTodaySchedule();
+
+            // Debug logging
+            \Log::info('Today schedule data:', [
+                'user_id' => $user->id,
+                'schedule' => $todaySchedule ? $todaySchedule->toArray() : null,
+                'shift' => $todaySchedule && $todaySchedule->shift ? $todaySchedule->shift->toArray() : null
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'attendance' => $attendance,
+                    'schedule' => $todaySchedule,
+                    'can_clock_in' => $user->canClockInToday(),
+                    'work_type' => $user->getTodayWorkType(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error loading today attendance: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data absensi. Silakan coba lagi.',
+                'data' => [
+                    'attendance' => null,
+                    'schedule' => null,
+                    'can_clock_in' => false,
+                    'work_type' => null,
+                ]
+            ], 500);
+        }
+    }
+
+    public function getRecentAttendance()
+    {
+        try {
+            $user = Auth::user();
+            $recentAttendances = Attendance::where('user_id', $user->id)
+                                          ->with(['user'])
+                                          ->orderBy('date', 'desc')
+                                          ->limit(7)
+                                          ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $recentAttendances
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error loading recent attendance: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat riwayat absensi.',
+                'data' => []
+            ], 500);
+        }
+    }
+
+    public function attempt(Request $request)
     {
         $user = Auth::user();
         $today = today();
 
+        // Check if already has attendance today
         $attendance = Attendance::where('user_id', $user->id)
                                 ->where('date', $today)
                                 ->first();
 
         if (!$attendance || !$attendance->clock_in) {
+            // Perform clock in
+            return $this->clockIn($request);
+        } elseif (!$attendance->clock_out) {
+            // Perform clock out
+            return $this->clockOut($request);
+        } else {
+            // Already completed
             return response()->json([
                 'success' => false,
-                'message' => 'Anda belum melakukan clock in hari ini.'
+                'message' => 'Absensi hari ini sudah lengkap.'
             ]);
         }
-
-        if ($attendance->break_start) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda sudah memulai istirahat hari ini.'
-            ]);
-        }
-
-        $attendance->update([
-            'break_start' => now()
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Istirahat dimulai.',
-            'data' => $attendance
-        ]);
     }
 
-    public function endBreak(Request $request)
+    /**
+     * Validate current location for attendance
+     */
+    public function validateCurrentLocation(Request $request)
     {
+        $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
         $user = Auth::user();
-        $today = today();
+        $todaySchedule = $user->getTodaySchedule();
 
-        $attendance = Attendance::where('user_id', $user->id)
-                                ->where('date', $today)
-                                ->first();
-
-        if (!$attendance || !$attendance->break_start) {
+        if (!$todaySchedule) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda belum memulai istirahat hari ini.'
+                'message' => 'Tidak ada jadwal kerja untuk hari ini',
+                'data' => [
+                    'valid' => false,
+                    'work_type' => null,
+                    'office' => null,
+                    'distance' => null,
+                    'required_radius' => null
+                ]
             ]);
         }
 
-        if ($attendance->break_end) {
+        // For WFA, location is always valid
+        if ($todaySchedule->work_type === 'WFA') {
             return response()->json([
-                'success' => false,
-                'message' => 'Anda sudah mengakhiri istirahat hari ini.'
+                'success' => true,
+                'message' => 'Work From Anywhere - lokasi valid',
+                'data' => [
+                    'valid' => true,
+                    'work_type' => 'WFA',
+                    'office' => null,
+                    'distance' => null,
+                    'required_radius' => null
+                ]
             ]);
         }
 
-        $breakEnd = now();
-        $breakStart = Carbon::parse($attendance->break_start);
-        $totalBreakMinutes = $breakEnd->diffInMinutes($breakStart);
-
-        $attendance->update([
-            'break_end' => $breakEnd,
-            'total_break_minutes' => $totalBreakMinutes
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Istirahat selesai.',
-            'data' => $attendance
-        ]);
-    }
-
-    public function getTodayAttendance()
-    {
-        $user = Auth::user();
-        $attendance = Attendance::where('user_id', $user->id)
-                                ->where('date', today())
-                                ->first();
+        // For WFO, validate against office location
+        $locationValidation = $this->geofencingService->validateScheduleLocation(
+            $request->latitude,
+            $request->longitude,
+            $user->id,
+            today()
+        );
 
         return response()->json([
             'success' => true,
-            'data' => $attendance
+            'message' => $locationValidation['message'],
+            'data' => [
+                'valid' => $locationValidation['valid'],
+                'work_type' => $locationValidation['work_type'] ?? 'WFO',
+                'office' => $locationValidation['office'] ?? null,
+                'distance' => $locationValidation['distance'] ?? null,
+                'required_radius' => $locationValidation['required_radius'] ?? null
+            ]
         ]);
     }
 
@@ -275,15 +493,17 @@ class AttendanceController extends Controller
         $request->validate([
             'clock_in' => 'nullable|date_format:H:i',
             'clock_out' => 'nullable|date_format:H:i',
-            'break_start' => 'nullable|date_format:H:i',
-            'break_end' => 'nullable|date_format:H:i',
-            'status' => 'required|in:present,absent,late,half_day,sick,leave,holiday',
-            'notes' => 'nullable|string',
+            'late_minutes' => 'nullable|integer|min:0',
+            'early_minutes' => 'nullable|integer|min:0',
+            'early_leave_minutes' => 'nullable|integer|min:0',
+            'overtime_minutes' => 'nullable|integer|min:0',
+            'status' => 'required|in:present,absent,late,early,half_day,sick,leave,holiday',
         ]);
 
         $data = $request->only([
-            'clock_in', 'clock_out', 'break_start', 'break_end', 
-            'status', 'notes'
+            'clock_in', 'clock_out',
+            'late_minutes', 'early_minutes', 'early_leave_minutes', 'overtime_minutes',
+            'status'
         ]);
 
         // Recalculate work minutes if times are provided
@@ -291,13 +511,6 @@ class AttendanceController extends Controller
             $clockIn = Carbon::parse($data['clock_in']);
             $clockOut = Carbon::parse($data['clock_out']);
             $totalWorkMinutes = $clockOut->diffInMinutes($clockIn);
-
-            if ($data['break_start'] && $data['break_end']) {
-                $breakStart = Carbon::parse($data['break_start']);
-                $breakEnd = Carbon::parse($data['break_end']);
-                $totalWorkMinutes -= $breakEnd->diffInMinutes($breakStart);
-                $data['total_break_minutes'] = $breakEnd->diffInMinutes($breakStart);
-            }
 
             $data['total_work_minutes'] = $totalWorkMinutes;
 

@@ -26,6 +26,8 @@ class Payroll extends Model
         'total_overtime_hours',
         'notes',
         'status',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
@@ -36,6 +38,7 @@ class Payroll extends Model
         'gross_salary' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'net_salary' => 'decimal:2',
+        'approved_at' => 'datetime',
     ];
 
     // Relationships
@@ -52,6 +55,11 @@ class Payroll extends Model
     public function details()
     {
         return $this->hasMany(PayrollDetail::class);
+    }
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     // Scopes

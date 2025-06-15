@@ -13,6 +13,20 @@ class UserSeeder extends Seeder
     {
         $users = [
             [
+                'employee_id' => 'ADM001',
+                'username' => 'admin',
+                'email' => 'admin@stea.co.id',
+                'password' => Hash::make('admin123'),
+                'first_name' => 'System',
+                'last_name' => 'Administrator',
+                'phone' => '081234567888',
+                'gender' => 'male',
+                'birth_date' => '1980-01-01',
+                'address' => 'System Administrator',
+                'status' => 'active',
+                'role' => 'admin',
+            ],
+            [
                 'employee_id' => 'EMP001',
                 'username' => 'ceo.stea',
                 'email' => 'ceo@stea.co.id',

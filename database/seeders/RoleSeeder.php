@@ -11,6 +11,12 @@ class RoleSeeder extends Seeder
     {
         $roles = [
             [
+                'name' => 'admin',
+                'display_name' => 'System Administrator',
+                'description' => 'Super admin dengan akses penuh ke semua sistem dan konfigurasi',
+                'is_active' => true,
+            ],
+            [
                 'name' => 'ceo',
                 'display_name' => 'Chief Executive Officer',
                 'description' => 'Akses penuh ke semua modul sistem',

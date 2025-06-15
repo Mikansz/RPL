@@ -36,8 +36,7 @@ return new class extends Migration
             $table->integer('late_minutes')->default(0);
             $table->integer('early_leave_minutes')->default(0);
             $table->integer('overtime_minutes')->default(0);
-            $table->enum('status', ['present', 'absent', 'late', 'half_day', 'sick', 'leave', 'holiday'])->default('absent');
-            $table->text('notes')->nullable();
+            $table->enum('status', ['present', 'absent', 'late', 'early_leave', 'half_day', 'sick', 'leave', 'holiday'])->default('absent');
             $table->string('clock_in_ip', 45)->nullable();
             $table->string('clock_out_ip', 45)->nullable();
             $table->decimal('clock_in_lat', 10, 8)->nullable();
@@ -53,7 +52,7 @@ return new class extends Migration
         Schema::create('leave_types', function (Blueprint $table) {
             $table->id();
             $table->string('name', 50);
-            $table->string('code', 10)->unique();
+            $table->string('code', 20)->unique();
             $table->integer('max_days_per_year')->default(12);
             $table->boolean('is_paid')->default(true);
             $table->boolean('requires_approval')->default(true);

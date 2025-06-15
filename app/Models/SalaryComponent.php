@@ -112,16 +112,16 @@ class SalaryComponent extends Model
     {
         // Simple formula evaluation - can be extended
         $formula = str_replace('basic_salary', $basicSalary, $this->formula);
-        
+
         // For security, only allow basic math operations
         if (preg_match('/^[\d\+\-\*\/\(\)\.\s]+$/', $formula)) {
             try {
                 return eval("return $formula;");
-            } catch (Exception $e) {
+            } catch (\Exception $e) {
                 return 0;
             }
         }
-        
+
         return 0;
     }
 }

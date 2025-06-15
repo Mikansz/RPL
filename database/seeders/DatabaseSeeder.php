@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             EmployeeSeeder::class,
             PermitSeeder::class,
+            OfficeShiftScheduleSeeder::class, // Add this seeder
         ]);
     }
 }

@@ -175,28 +175,43 @@ class OvertimeRequest extends Model
 
     public function calculateOvertimeAmount($hourlyRate = null)
     {
-        if (!$this->actual_hours) {
+        $hours = $this->actual_hours ?? $this->planned_hours;
+
+        if (!$hours) {
             return 0;
         }
 
         if (!$hourlyRate) {
-            // Calculate hourly rate from basic salary
-            $basicSalary = $this->user->employee->basic_salary ?? 0;
-            $hourlyRate = $basicSalary / 173; // 173 = average working hours per month
+            $hourlyRate = $this->calculateHourlyRate();
         }
 
         // Apply overtime multiplier (1.5x for regular overtime)
-        $overtimeRate = $this->overtime_rate ?? ($hourlyRate * 1.5);
-        
-        return $this->actual_hours * $overtimeRate;
+        $overtimeRate = $hourlyRate * 1.5;
+
+        return $hours * $overtimeRate;
+    }
+
+    public function calculateHourlyRate()
+    {
+        // Calculate hourly rate from basic salary
+        $basicSalary = $this->user->employee->basic_salary ?? 0;
+
+        if ($basicSalary <= 0) {
+            return 0;
+        }
+
+        // 173 = average working hours per month (22 days * 8 hours - 3 hours break)
+        return $basicSalary / 173;
     }
 
     public function updateOvertimeAmount()
     {
-        $amount = $this->calculateOvertimeAmount();
+        $hourlyRate = $this->calculateHourlyRate();
+        $amount = $this->calculateOvertimeAmount($hourlyRate);
+
         $this->update([
             'overtime_amount' => $amount,
-            'overtime_rate' => $this->overtime_rate ?? (($this->user->employee->basic_salary ?? 0) / 173 * 1.5),
+            'overtime_rate' => $hourlyRate * 1.5, // Store the overtime rate (with multiplier)
         ]);
 
         return $amount;

@@ -17,6 +17,7 @@ class EmployeeSeeder extends Seeder
         $positions = Position::all()->keyBy('code');
 
         $employeeData = [
+            'ADM001' => ['department' => 'IT', 'position' => 'DEV', 'salary' => 25000000],
             'EMP001' => ['department' => 'BOD', 'position' => 'CEO', 'salary' => 50000000],
             'EMP002' => ['department' => 'BOD', 'position' => 'CFO', 'salary' => 40000000],
             'EMP003' => ['department' => 'HR', 'position' => 'HRM', 'salary' => 20000000],
@@ -43,8 +44,6 @@ class EmployeeSeeder extends Seeder
                     'bank_name' => 'Bank Mandiri',
                     'bank_account' => '1234567890' . substr($user->employee_id, -3),
                     'bank_account_name' => $user->full_name,
-                    'tax_id' => '12.345.678.9-' . substr($user->employee_id, -3) . '.000',
-                    'social_security_id' => '0001' . substr($user->employee_id, -7),
                 ]);
             }
         }

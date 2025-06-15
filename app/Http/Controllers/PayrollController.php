@@ -16,7 +16,7 @@ class PayrollController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Payroll::with(['user', 'payrollPeriod']);
+        $query = Payroll::with(['user', 'payrollPeriod', 'approvedBy']);
 
         if ($request->filled('period_id')) {
             $query->where('payroll_period_id', $request->period_id);
@@ -26,10 +26,25 @@ class PayrollController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('user', function($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
+                  ->orWhere('employee_id', 'like', "%{$search}%");
+            });
+        }
+
         $payrolls = $query->orderBy('created_at', 'desc')->paginate(20);
         $periods = PayrollPeriod::orderBy('start_date', 'desc')->get();
 
-        return view('payroll.index', compact('payrolls', 'periods'));
+        // Calculate summary data
+        $total_payroll = $payrolls->sum('net_salary');
+        $processed_count = $payrolls->where('status', 'approved')->count() + $payrolls->where('status', 'paid')->count();
+        $pending_count = $payrolls->where('status', 'pending')->count() + $payrolls->where('status', 'draft')->count();
+        $total_employees = $payrolls->count();
+
+        return view('payroll.index', compact('payrolls', 'periods', 'total_payroll', 'processed_count', 'pending_count', 'total_employees'));
     }
 
     public function slip()
@@ -66,11 +81,26 @@ class PayrollController extends Controller
     public function storePeriod(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:50',
+            'name' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
-            'pay_date' => 'required|date|after_or_equal:end_date',
+            'pay_date' => 'nullable|date',
         ]);
+
+        // Check for overlapping periods
+        $overlapping = PayrollPeriod::where(function($query) use ($request) {
+            $query->whereBetween('start_date', [$request->start_date, $request->end_date])
+                  ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                  ->orWhere(function($q) use ($request) {
+                      $q->where('start_date', '<=', $request->start_date)
+                        ->where('end_date', '>=', $request->end_date);
+                  });
+        })->exists();
+
+        if ($overlapping) {
+            return back()->withErrors(['start_date' => 'Periode ini bertumpang tindih dengan periode yang sudah ada.'])
+                        ->withInput();
+        }
 
         PayrollPeriod::create([
             'name' => $request->name,
@@ -85,6 +115,8 @@ class PayrollController extends Controller
                         ->with('success', 'Periode payroll berhasil dibuat.');
     }
 
+
+
     public function calculate(PayrollPeriod $period)
     {
         if ($period->status !== 'draft') {
@@ -92,9 +124,8 @@ class PayrollController extends Controller
         }
 
         $employees = Employee::where('employment_status', 'active')
-                           ->with(['user.salaryComponents' => function($query) use ($period) {
-                               $query->wherePivot('is_active', true)
-                                     ->wherePivot('effective_date', '<=', $period->end_date);
+                           ->with(['user.salaryComponents' => function($query) {
+                               $query->where('salary_components.is_active', true);
                            }])
                            ->get();
 
@@ -139,7 +170,7 @@ class PayrollController extends Controller
         }
 
         // Get salary components
-        $salaryComponents = $employee->user->getCurrentSalaryComponents()->get();
+        $salaryComponents = $employee->user->salaryComponents()->where('salary_components.is_active', true)->get();
         
         $totalAllowances = 0;
         $totalDeductions = 0;
@@ -148,8 +179,10 @@ class PayrollController extends Controller
         $payrollDetails = [];
 
         foreach ($salaryComponents as $component) {
-            $amount = $component->calculateAmount($basicSalary, $component->pivot->amount);
-            
+            // Use pivot amount if available, otherwise use default calculation
+            $customAmount = isset($component->pivot) ? $component->pivot->amount : null;
+            $amount = $component->calculateAmount($basicSalary, $customAmount);
+
             if ($component->type === 'allowance') {
                 $totalAllowances += $amount;
             } elseif ($component->type === 'deduction') {
@@ -223,7 +256,16 @@ class PayrollController extends Controller
 
     public function approve(Payroll $payroll)
     {
-        $payroll->update(['status' => 'approved']);
+        // Check if payroll is in a state that can be approved
+        if (!in_array($payroll->status, ['draft', 'pending'])) {
+            return back()->with('error', 'Payroll tidak dapat disetujui karena status saat ini: ' . $payroll->status);
+        }
+
+        $payroll->update([
+            'status' => 'approved',
+            'approved_by' => Auth::id(),
+            'approved_at' => now(),
+        ]);
 
         return back()->with('success', 'Payroll berhasil disetujui.');
     }
@@ -244,6 +286,37 @@ class PayrollController extends Controller
         $period->payrolls()->update(['status' => 'approved']);
 
         return back()->with('success', 'Periode payroll berhasil disetujui.');
+    }
+
+    public function bulkApprove(Request $request)
+    {
+        $request->validate([
+            'payroll_ids' => 'required|array',
+            'payroll_ids.*' => 'exists:payrolls,id'
+        ]);
+
+        $payrollIds = $request->payroll_ids;
+
+        // Get payrolls that can be approved
+        $payrolls = Payroll::whereIn('id', $payrollIds)
+                          ->whereIn('status', ['draft', 'pending'])
+                          ->get();
+
+        if ($payrolls->isEmpty()) {
+            return back()->with('error', 'Tidak ada payroll yang dapat disetujui.');
+        }
+
+        $approvedCount = 0;
+        foreach ($payrolls as $payroll) {
+            $payroll->update([
+                'status' => 'approved',
+                'approved_by' => Auth::id(),
+                'approved_at' => now(),
+            ]);
+            $approvedCount++;
+        }
+
+        return back()->with('success', "Berhasil menyetujui {$approvedCount} payroll.");
     }
 
     public function reports(Request $request)
@@ -271,9 +344,34 @@ class PayrollController extends Controller
     public function downloadSlip(Payroll $payroll)
     {
         $payroll->load(['user', 'payrollPeriod', 'details.salaryComponent']);
-        
+
         // This would generate a PDF slip
         // For now, return a view
         return view('payroll.slip-pdf', compact('payroll'));
+    }
+
+    public function exportReport(Request $request)
+    {
+        $startDate = $request->get('start_date', now()->startOfYear()->format('Y-m-d'));
+        $endDate = $request->get('end_date', now()->endOfYear()->format('Y-m-d'));
+
+        $payrolls = Payroll::with(['user', 'payrollPeriod'])
+                          ->whereHas('payrollPeriod', function($q) use ($startDate, $endDate) {
+                              $q->whereBetween('start_date', [$startDate, $endDate]);
+                          })
+                          ->get();
+
+        // For now, return JSON data
+        // In a real implementation, this would generate Excel/CSV
+        return response()->json([
+            'data' => $payrolls,
+            'summary' => [
+                'total_employees' => $payrolls->groupBy('user_id')->count(),
+                'total_gross_salary' => $payrolls->sum('gross_salary'),
+                'total_net_salary' => $payrolls->sum('net_salary'),
+                'total_tax' => $payrolls->sum('tax_amount'),
+                'total_deductions' => $payrolls->sum('total_deductions'),
+            ]
+        ]);
     }
 }

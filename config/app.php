@@ -16,7 +16,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Sistem Penggajian STEA'),
+    'name' => env('APP_NAME', 'Sistem Penggajian RHI'),
 
     /*
     |--------------------------------------------------------------------------

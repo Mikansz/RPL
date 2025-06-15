@@ -13,8 +13,6 @@ class AttendanceRule extends Model
         'name',
         'work_start_time',
         'work_end_time',
-        'break_start_time',
-        'break_end_time',
         'late_tolerance_minutes',
         'early_leave_tolerance_minutes',
         'overtime_multiplier',
@@ -25,8 +23,6 @@ class AttendanceRule extends Model
     protected $casts = [
         'work_start_time' => 'datetime:H:i:s',
         'work_end_time' => 'datetime:H:i:s',
-        'break_start_time' => 'datetime:H:i:s',
-        'break_end_time' => 'datetime:H:i:s',
         'overtime_multiplier' => 'decimal:2',
         'is_default' => 'boolean',
         'is_active' => 'boolean',

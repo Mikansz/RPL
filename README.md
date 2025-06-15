@@ -33,7 +33,6 @@ Sistem Penggajian Terintegrasi dengan Absensi untuk PT. STEA Indonesia
 
 ### 📊 Dashboard & Laporan
 - **Role-specific Dashboards**: Dashboard khusus untuk setiap role
-- **Real-time Analytics**: Grafik dan statistik real-time
 - **Comprehensive Reports**: Laporan HR, keuangan, dan absensi
 
 ## Teknologi yang Digunakan

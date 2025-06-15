@@ -45,24 +45,7 @@ return new class extends Migration
             $table->index(['start_date', 'end_date']);
         });
 
-        // Day Exchange Requests Table (Tukar Hari)
-        Schema::create('day_exchanges', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->date('original_work_date'); // Hari kerja yang ingin ditukar
-            $table->date('replacement_date'); // Hari pengganti
-            $table->text('reason');
-            $table->enum('status', ['pending', 'approved', 'rejected', 'completed'])->default('pending');
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->timestamp('approved_at')->nullable();
-            $table->text('approval_notes')->nullable();
-            $table->boolean('is_completed')->default(false);
-            $table->timestamp('completed_at')->nullable();
-            $table->timestamps();
 
-            $table->index(['user_id', 'status']);
-            $table->index(['original_work_date', 'replacement_date']);
-        });
 
         // Overtime Requests Table
         Schema::create('overtime_requests', function (Blueprint $table) {
@@ -119,7 +102,7 @@ return new class extends Migration
         // Permit Approvals Table (Multi-level approval)
         Schema::create('permit_approvals', function (Blueprint $table) {
             $table->id();
-            $table->morphs('approvable'); // permits, day_exchanges, overtime_requests, leave_requests
+            $table->morphs('approvable'); // permits, overtime_requests, leave_requests
             $table->foreignId('approver_id')->constrained('users')->onDelete('cascade');
             $table->integer('approval_level')->default(1);
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
@@ -127,7 +110,6 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
 
-            $table->index(['approvable_type', 'approvable_id']);
             $table->index(['approver_id', 'status']);
         });
 
@@ -148,7 +130,6 @@ return new class extends Migration
         Schema::dropIfExists('permit_approvals');
         Schema::dropIfExists('leave_requests');
         Schema::dropIfExists('overtime_requests');
-        Schema::dropIfExists('day_exchanges');
         Schema::dropIfExists('permits');
         Schema::dropIfExists('permit_types');
     }

@@ -28,8 +28,8 @@ class EmployeeController extends Controller
             $query->where('department_id', $request->department_id);
         }
 
-        if ($request->filled('employment_status')) {
-            $query->where('employment_status', $request->employment_status);
+        if ($request->filled('status')) {
+            $query->where('employment_status', $request->status);
         }
 
         $employees = $query->orderBy('created_at', 'desc')->paginate(20);
@@ -43,8 +43,10 @@ class EmployeeController extends Controller
         $departments = Department::where('is_active', true)->get();
         $users = User::whereDoesntHave('employee')->get();
         $supervisors = User::whereHas('employee')->get();
-        
-        return view('employees.create', compact('departments', 'users', 'supervisors'));
+        $shifts = \App\Models\Shift::active()->get();
+        $offices = \App\Models\Office::active()->get();
+
+        return view('employees.create', compact('departments', 'users', 'supervisors', 'shifts', 'offices'));
     }
 
     public function store(Request $request)
@@ -62,9 +64,15 @@ class EmployeeController extends Controller
             'bank_name' => 'nullable|string|max:50',
             'bank_account' => 'nullable|string|max:30',
             'bank_account_name' => 'nullable|string|max:100',
-            'tax_id' => 'nullable|string|max:30',
-            'social_security_id' => 'nullable|string|max:30',
+            'default_shift_id' => 'required|exists:shifts,id',
+            'default_office_id' => 'nullable|exists:offices,id',
+            'default_work_type' => 'required|in:WFO,WFA',
         ]);
+
+        // Validate office_id for WFO
+        if ($request->default_work_type === 'WFO' && !$request->default_office_id) {
+            return back()->withErrors(['default_office_id' => 'Office is required for WFO work type.']);
+        }
 
         Employee::create([
             'user_id' => $request->user_id,
@@ -80,8 +88,9 @@ class EmployeeController extends Controller
             'bank_name' => $request->bank_name,
             'bank_account' => $request->bank_account,
             'bank_account_name' => $request->bank_account_name,
-            'tax_id' => $request->tax_id,
-            'social_security_id' => $request->social_security_id,
+            'default_shift_id' => $request->default_shift_id,
+            'default_office_id' => $request->default_work_type === 'WFO' ? $request->default_office_id : null,
+            'default_work_type' => $request->default_work_type,
         ]);
 
         return redirect()->route('employees.index')
@@ -98,9 +107,14 @@ class EmployeeController extends Controller
     {
         $departments = Department::where('is_active', true)->get();
         $positions = Position::where('is_active', true)->get();
-        $supervisors = User::whereHas('employee')->where('id', '!=', $employee->user_id)->get();
-        
-        return view('employees.edit', compact('employee', 'departments', 'positions', 'supervisors'));
+        $supervisors = Employee::with(['user', 'position'])
+                              ->where('id', '!=', $employee->id)
+                              ->where('employment_status', 'active')
+                              ->get();
+        $shifts = \App\Models\Shift::active()->get();
+        $offices = \App\Models\Office::active()->get();
+
+        return view('employees.edit', compact('employee', 'departments', 'positions', 'supervisors', 'shifts', 'offices'));
     }
 
     public function update(Request $request, Employee $employee)
@@ -118,15 +132,21 @@ class EmployeeController extends Controller
             'bank_name' => 'nullable|string|max:50',
             'bank_account' => 'nullable|string|max:30',
             'bank_account_name' => 'nullable|string|max:100',
-            'tax_id' => 'nullable|string|max:30',
-            'social_security_id' => 'nullable|string|max:30',
+            'default_shift_id' => 'required|exists:shifts,id',
+            'default_office_id' => 'nullable|exists:offices,id',
+            'default_work_type' => 'required|in:WFO,WFA',
         ]);
+
+        // Validate office_id for WFO
+        if ($request->default_work_type === 'WFO' && !$request->default_office_id) {
+            return back()->withErrors(['default_office_id' => 'Office is required for WFO work type.']);
+        }
 
         $employee->update($request->only([
             'department_id', 'position_id', 'supervisor_id', 'hire_date',
             'contract_start', 'contract_end', 'employment_type', 'employment_status',
             'basic_salary', 'bank_name', 'bank_account', 'bank_account_name',
-            'tax_id', 'social_security_id'
+            'default_shift_id', 'default_office_id', 'default_work_type'
         ]));
 
         return redirect()->route('employees.index')
@@ -144,12 +164,7 @@ class EmployeeController extends Controller
     public function salary(Employee $employee)
     {
         $employee->load(['user.salaryComponents' => function($query) {
-            $query->wherePivot('is_active', true)
-                  ->wherePivot('effective_date', '<=', now())
-                  ->where(function($q) {
-                      $q->wherePivotNull('end_date')
-                        ->orWherePivot('end_date', '>=', now());
-                  });
+            $query->where('salary_components.is_active', true);
         }]);
 
         $availableComponents = SalaryComponent::where('is_active', true)

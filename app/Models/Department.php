@@ -13,7 +13,6 @@ class Department extends Model
         'code',
         'name',
         'description',
-        'manager_id',
         'is_active',
     ];
 
@@ -22,11 +21,6 @@ class Department extends Model
     ];
 
     // Relationships
-    public function manager()
-    {
-        return $this->belongsTo(User::class, 'manager_id');
-    }
-
     public function employees()
     {
         return $this->hasMany(Employee::class);
@@ -46,8 +40,6 @@ class Department extends Model
     // Helper methods
     public function getActiveEmployeesCount()
     {
-        return $this->employees()->whereHas('user', function ($query) {
-            $query->where('status', 'active');
-        })->count();
+        return $this->employees()->where('employment_status', 'active')->count();
     }
 }

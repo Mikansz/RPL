@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mobile Sidebar - RHI</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --sidebar-width: 250px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .sidebar-header h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+        
+        .sidebar-menu .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 12px 20px;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-menu .nav-link:hover,
+        .sidebar-menu .nav-link.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 15px 30px;
+        }
+        
+        .content-wrapper {
+            padding: 30px;
+            flex: 1;
+        }
+
+        /* Mobile Sidebar Overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .sidebar-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Improve mobile toggle button */
+        #sidebarToggle {
+            padding: 8px 12px;
+            font-size: 1.2rem;
+            color: #667eea;
+            transition: all 0.2s ease;
+        }
+        
+        #sidebarToggle:hover {
+            color: #764ba2;
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                z-index: 1001;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        
+        .test-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-feature {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h4><i class="fas fa-building me-2"></i>RHI</h4>
+            <small>Test Mobile Sidebar</small>
+        </div>
+        
+        <div class="sidebar-menu">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-users me-2"></i>Manajemen User
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-user-tie me-2"></i>Data Karyawan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-clock me-2"></i>Absensi
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="fas fa-calendar-alt me-2"></i>Jadwal Kerja
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Navbar -->
+        <nav class="navbar">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <div>
+                    <button class="btn btn-link d-md-none" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h5 class="page-title d-none d-md-block">Test Mobile Sidebar</h5>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-2"></i>Test User
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profil</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Content -->
+        <div class="content-wrapper">
+            <div class="test-info">
+                <h4><i class="fas fa-mobile-alt me-2"></i>Test Mobile Sidebar Functionality</h4>
+                <p class="mb-0">Halaman ini untuk menguji fungsionalitas sidebar mobile yang telah diperbaiki.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="test-feature">
+                        <h5><i class="fas fa-check-circle text-success me-2"></i>Fitur yang Diperbaiki:</h5>
+                        <ul>
+                            <li>✅ Klik tombol hamburger untuk membuka sidebar</li>
+                            <li>✅ Klik overlay (area gelap) untuk menutup sidebar</li>
+                            <li>✅ Klik menu sidebar untuk navigasi dan auto-close</li>
+                            <li>✅ Tekan tombol Escape untuk menutup sidebar</li>
+                            <li>✅ Swipe kiri pada sidebar untuk menutup</li>
+                            <li>✅ Icon berubah dari hamburger ke X saat sidebar terbuka</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="test-feature">
+                        <h5><i class="fas fa-instructions text-info me-2"></i>Cara Test:</h5>
+                        <ol>
+                            <li>Buka halaman ini di perangkat mobile atau resize browser ke ukuran mobile</li>
+                            <li>Klik tombol hamburger (☰) di navbar</li>
+                            <li>Sidebar akan muncul dengan overlay</li>
+                            <li>Coba berbagai cara untuk menutup sidebar</li>
+                            <li>Pastikan semua metode berfungsi dengan baik</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-feature">
+                <h5><i class="fas fa-bug text-warning me-2"></i>Masalah yang Diperbaiki:</h5>
+                <div class="alert alert-warning">
+                    <strong>Masalah Sebelumnya:</strong> Sidebar tidak bisa ditutup di Android karena tidak ada overlay dan hanya ada fungsi toggle.
+                </div>
+                <div class="alert alert-success">
+                    <strong>Solusi:</strong> Ditambahkan overlay, multiple cara untuk menutup sidebar, dan gesture support untuk pengalaman mobile yang lebih baik.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Sidebar functionality for mobile
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+
+        // Function to open sidebar
+        function openSidebar() {
+            sidebar.classList.add('show');
+            sidebarOverlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
+
+            // Change toggle button icon to close icon
+            const toggleIcon = sidebarToggle?.querySelector('i');
+            if (toggleIcon) {
+                toggleIcon.className = 'fas fa-times';
+            }
+        }
+
+        // Function to close sidebar
+        function closeSidebar() {
+            sidebar.classList.remove('show');
+            sidebarOverlay.classList.remove('show');
+            document.body.style.overflow = '';
+
+            // Change toggle button icon back to hamburger
+            const toggleIcon = sidebarToggle?.querySelector('i');
+            if (toggleIcon) {
+                toggleIcon.className = 'fas fa-bars';
+            }
+        }
+
+        // Toggle sidebar when hamburger button is clicked
+        sidebarToggle?.addEventListener('click', function() {
+            if (sidebar.classList.contains('show')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+
+        // Close sidebar when overlay is clicked
+        sidebarOverlay?.addEventListener('click', function() {
+            closeSidebar();
+        });
+
+        // Close sidebar when escape key is pressed
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && sidebar.classList.contains('show')) {
+                closeSidebar();
+            }
+        });
+
+        // Close sidebar when clicking on sidebar links (for navigation)
+        sidebar?.addEventListener('click', function(e) {
+            if (e.target.classList.contains('nav-link') && window.innerWidth <= 768) {
+                closeSidebar();
+            }
+        });
+
+        // Handle window resize - close sidebar if screen becomes larger
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768 && sidebar.classList.contains('show')) {
+                closeSidebar();
+            }
+        });
+
+        // Touch gesture support for closing sidebar
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        sidebar?.addEventListener('touchstart', function(e) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+
+        sidebar?.addEventListener('touchmove', function(e) {
+            if (!sidebar.classList.contains('show')) return;
+
+            const touchCurrentX = e.touches[0].clientX;
+            const touchCurrentY = e.touches[0].clientY;
+            const deltaX = touchCurrentX - touchStartX;
+            const deltaY = touchCurrentY - touchStartY;
+
+            // If swipe left is detected and it's more horizontal than vertical
+            if (deltaX < -50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                closeSidebar();
+            }
+        });
+    </script>
+</body>
+</html>

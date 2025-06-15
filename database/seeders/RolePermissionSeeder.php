@@ -10,9 +10,13 @@ class RolePermissionSeeder extends Seeder
 {
     public function run()
     {
+        // Admin - Super Admin Full Access
+        $admin = Role::where('name', 'admin')->first();
+        $allPermissions = Permission::all();
+        $admin->permissions()->attach($allPermissions->pluck('id'));
+
         // CEO - Full Access
         $ceo = Role::where('name', 'ceo')->first();
-        $allPermissions = Permission::all();
         $ceo->permissions()->attach($allPermissions->pluck('id'));
 
         // CFO - Financial Focus
@@ -20,7 +24,7 @@ class RolePermissionSeeder extends Seeder
         $cfoPermissions = Permission::whereIn('name', [
             'dashboard.view', 'dashboard.analytics',
             'employees.view', 'employees.view_salary',
-            'payroll.view_all', 'payroll.approve', 'payroll.reports',
+            'payroll.view_all', 'payroll.approve', 'payroll.reports', 'payroll.create',
             'reports.view', 'reports.financial', 'reports.export',
             'attendance.reports',
         ])->get();

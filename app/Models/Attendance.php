@@ -15,29 +15,25 @@ class Attendance extends Model
         'date',
         'clock_in',
         'clock_out',
-        'break_start',
-        'break_end',
         'total_work_minutes',
-        'total_break_minutes',
         'late_minutes',
+        'early_minutes',
         'early_leave_minutes',
         'overtime_minutes',
         'status',
-        'notes',
         'clock_in_ip',
         'clock_out_ip',
         'clock_in_lat',
         'clock_in_lng',
         'clock_out_lat',
         'clock_out_lng',
+        'office_id',
     ];
 
     protected $casts = [
         'date' => 'date',
         'clock_in' => 'datetime:H:i:s',
         'clock_out' => 'datetime:H:i:s',
-        'break_start' => 'datetime:H:i:s',
-        'break_end' => 'datetime:H:i:s',
         'clock_in_lat' => 'decimal:8',
         'clock_in_lng' => 'decimal:8',
         'clock_out_lat' => 'decimal:8',
@@ -48,6 +44,17 @@ class Attendance extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function office()
+    {
+        return $this->belongsTo(Office::class);
+    }
+
+    public function schedule()
+    {
+        return $this->hasOne(Schedule::class, 'user_id', 'user_id')
+                    ->where('schedule_date', $this->date);
     }
 
     // Scopes
@@ -74,17 +81,59 @@ class Attendance extends Model
     // Helper methods
     public function isPresent()
     {
-        return in_array($this->status, ['present', 'late', 'half_day']);
+        return in_array($this->status, ['present', 'late', 'early', 'early_leave', 'half_day']);
     }
 
     public function isLate()
     {
-        return $this->late_minutes > 0;
+        return $this->late_minutes > 0 || $this->status === 'late';
+    }
+
+    public function isEarly()
+    {
+        return $this->early_minutes > 0;
+    }
+
+    public function isEarlyLeave()
+    {
+        return $this->early_leave_minutes > 0 || $this->status === 'early_leave';
     }
 
     public function hasOvertime()
     {
         return $this->overtime_minutes > 0;
+    }
+
+    public function getStatusIndonesian()
+    {
+        $statusLabels = [
+            'present' => 'Hadir',
+            'late' => 'Terlambat',
+            'early_leave' => 'Pulang Awal',
+            'absent' => 'Alpha',
+            'sick' => 'Sakit',
+            'leave' => 'Cuti',
+            'holiday' => 'Libur',
+            'half_day' => 'Setengah Hari'
+        ];
+
+        return $statusLabels[$this->status] ?? ucfirst($this->status);
+    }
+
+    public function getStatusColor()
+    {
+        $statusColors = [
+            'present' => 'success',
+            'late' => 'warning',
+            'early_leave' => 'info',
+            'absent' => 'danger',
+            'sick' => 'secondary',
+            'leave' => 'primary',
+            'holiday' => 'dark',
+            'half_day' => 'light'
+        ];
+
+        return $statusColors[$this->status] ?? 'secondary';
     }
 
     public function getTotalWorkHoursAttribute()

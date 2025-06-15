@@ -4,7 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\PermitType;
-use App\Models\DayExchange;
+
 use App\Models\OvertimeRequest;
 use App\Models\LeaveRequest;
 use App\Models\User;
@@ -71,29 +71,7 @@ class PermitSeeder extends Seeder
         $employees = User::whereHas('employee')->take(5)->get();
         
         if ($employees->count() > 0) {
-            // Create sample Day Exchange requests
-            foreach ($employees->take(3) as $employee) {
-                DayExchange::create([
-                    'user_id' => $employee->id,
-                    'original_work_date' => now()->addDays(rand(7, 14)),
-                    'replacement_date' => now()->addDays(rand(15, 21))->next(Carbon::SATURDAY),
-                    'reason' => 'Ada acara keluarga yang penting dan tidak bisa ditinggalkan.',
-                    'status' => 'pending',
-                ]);
 
-                DayExchange::create([
-                    'user_id' => $employee->id,
-                    'original_work_date' => now()->subDays(rand(7, 14)),
-                    'replacement_date' => now()->subDays(rand(1, 6))->previous(Carbon::SUNDAY),
-                    'reason' => 'Menghadiri seminar penting untuk pengembangan karir.',
-                    'status' => 'approved',
-                    'approved_by' => User::whereHas('roles', function($q) {
-                        $q->where('name', 'hrd');
-                    })->first()->id ?? null,
-                    'approved_at' => now()->subDays(rand(1, 5)),
-                    'approval_notes' => 'Disetujui dengan catatan harus menyelesaikan pekerjaan yang tertunda.',
-                ]);
-            }
 
             // Create sample Overtime requests
             foreach ($employees->take(4) as $employee) {

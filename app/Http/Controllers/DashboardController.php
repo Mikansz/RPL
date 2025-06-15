@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Employee;
 use App\Models\Attendance;
-use App\Models\Payroll;
+
 use App\Models\Leave;
 use App\Models\Department;
 use Carbon\Carbon;
@@ -44,10 +44,7 @@ class DashboardController extends Controller
         $data = [
             'total_employees' => Employee::where('employment_status', 'active')->count(),
             'total_departments' => Department::where('is_active', true)->count(),
-            'monthly_payroll' => Payroll::whereHas('payrollPeriod', function($q) {
-                $q->where('start_date', '<=', now())
-                  ->where('end_date', '>=', now());
-            })->sum('net_salary'),
+
             'attendance_rate' => $this->getAttendanceRate(),
             'recent_leaves' => Leave::with(['user', 'leaveType'])
                 ->where('status', 'pending')
@@ -63,19 +60,11 @@ class DashboardController extends Controller
 
     private function cfoDashboard()
     {
-        $currentMonth = now()->format('Y-m');
-        
         $data = [
-            'monthly_payroll_cost' => Payroll::whereHas('payrollPeriod', function($q) use ($currentMonth) {
-                $q->whereRaw("DATE_FORMAT(start_date, '%Y-%m') = ?", [$currentMonth]);
-            })->sum('net_salary'),
-            'yearly_payroll_cost' => Payroll::whereHas('payrollPeriod', function($q) {
-                $q->whereYear('start_date', now()->year);
-            })->sum('net_salary'),
-            'payroll_by_department' => $this->getPayrollByDepartment(),
-            'cost_trends' => $this->getCostTrends(),
-            'budget_analysis' => $this->getBudgetAnalysis(),
-            'pending_approvals' => Payroll::where('status', 'draft')->count(),
+            'total_employees' => Employee::where('employment_status', 'active')->count(),
+            'total_departments' => Department::where('is_active', true)->count(),
+            'attendance_today' => Attendance::where('date', today())->count(),
+            'pending_leaves' => Leave::where('status', 'pending')->count(),
         ];
 
         return view('dashboard.cfo', $data);
@@ -143,11 +132,15 @@ class DashboardController extends Controller
             'monthly_attendance' => Attendance::where('user_id', $user->id)
                 ->whereMonth('date', now()->month)
                 ->whereYear('date', now()->year)
-                ->get(),
-            'recent_payroll' => Payroll::where('user_id', $user->id)
-                ->with('payrollPeriod')
-                ->latest()
-                ->first(),
+                ->get()
+                ->map(function($attendance) {
+                    return [
+                        'date' => $attendance->date->format('Y-m-d'),
+                        'total_work_minutes' => $attendance->total_work_minutes ?? 0,
+                    ];
+                })
+                ->toArray(),
+
             'leave_balance' => $this->getLeaveBalance($user->id),
             'recent_leaves' => Leave::where('user_id', $user->id)
                 ->with('leaveType')
@@ -194,65 +187,15 @@ class DashboardController extends Controller
                     ->whereYear('hire_date', '<=', $date->year)
                     ->where('employment_status', 'active')
                     ->count(),
-                'payroll' => Payroll::whereHas('payrollPeriod', function($q) use ($date) {
-                    $q->whereMonth('start_date', $date->month)
-                      ->whereYear('start_date', $date->year);
-                })->sum('net_salary'),
+                'attendance' => Attendance::whereMonth('date', $date->month)
+                    ->whereYear('date', $date->year)
+                    ->count(),
             ];
         }
         return $months;
     }
 
-    private function getPayrollByDepartment()
-    {
-        return Department::with(['employees.user.payrolls' => function($q) {
-            $q->whereHas('payrollPeriod', function($q2) {
-                $q2->whereMonth('start_date', now()->month)
-                   ->whereYear('start_date', now()->year);
-            });
-        }])->get()->map(function($dept) {
-            return [
-                'name' => $dept->name,
-                'total' => $dept->employees->sum(function($emp) {
-                    return $emp->user->payrolls->sum('net_salary');
-                })
-            ];
-        });
-    }
 
-    private function getCostTrends()
-    {
-        $trends = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $trends[] = [
-                'month' => $date->format('M Y'),
-                'amount' => Payroll::whereHas('payrollPeriod', function($q) use ($date) {
-                    $q->whereMonth('start_date', $date->month)
-                      ->whereYear('start_date', $date->year);
-                })->sum('net_salary'),
-            ];
-        }
-        return $trends;
-    }
-
-    private function getBudgetAnalysis()
-    {
-        // Simplified budget analysis - in real app, this would come from budget table
-        $currentMonthCost = Payroll::whereHas('payrollPeriod', function($q) {
-            $q->whereMonth('start_date', now()->month)
-              ->whereYear('start_date', now()->year);
-        })->sum('net_salary');
-        
-        $budgetLimit = 1000000000; // 1 billion IDR as example
-        
-        return [
-            'actual' => $currentMonthCost,
-            'budget' => $budgetLimit,
-            'variance' => $budgetLimit - $currentMonthCost,
-            'percentage' => $budgetLimit > 0 ? round(($currentMonthCost / $budgetLimit) * 100, 2) : 0,
-        ];
-    }
 
     private function getAttendanceSummary()
     {
@@ -275,14 +218,13 @@ class DashboardController extends Controller
 
     private function getLeaveBalance($userId)
     {
-        // Simplified leave balance calculation
-        return [
-            'annual' => 12 - Leave::where('user_id', $userId)
-                ->whereYear('start_date', now()->year)
-                ->where('status', 'approved')
-                ->sum('total_days'),
-            'sick' => 30, // Usually unlimited or high limit
-        ];
+        // Simplified leave balance calculation - return annual leave balance as number
+        $usedAnnualLeave = Leave::where('user_id', $userId)
+            ->whereYear('start_date', now()->year)
+            ->where('status', 'approved')
+            ->sum('total_days');
+
+        return max(0, 12 - $usedAnnualLeave);
     }
 
     private function getUserAttendanceStats($userId)
