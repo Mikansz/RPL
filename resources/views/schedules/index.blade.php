@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', auth()->user()->hasRole('karyawan') ? 'Jadwal Saya' : 'Jadwal Kerja')
-@section('page-title', auth()->user()->hasRole('karyawan') ? 'Jadwal Kerja Saya' : 'Manajemen Jadwal Kerja')
+@section('title', 'Jadwal Kerja')
+@section('page-title', 'Manajemen Jadwal Kerja')
 
 @section('content')
 <div class="row">
@@ -10,28 +10,18 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="fas fa-calendar-alt me-2"></i>
-                    @if(auth()->user()->hasRole('karyawan'))
-                        Jadwal Kerja Saya
-                    @else
-                        Daftar Jadwal Kerja
-                    @endif
+                    Daftar Jadwal Kerja
                 </h5>
                 <div>
                     <a href="{{ route('schedules.calendar') }}" class="btn btn-info btn-sm me-2">
                         <i class="fas fa-calendar me-1"></i>
                         Kalender
                     </a>
-                    @if(!auth()->user()->hasRole('karyawan'))
-                    <div class="btn-group" role="group">
-                        <a href="{{ route('schedules.create') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus me-1"></i>
-                            Tambah Jadwal
-                        </a>
-                        <a href="{{ route('schedules.bulk-create') }}" class="btn btn-success btn-sm">
-                            <i class="fas fa-calendar-plus me-1"></i>
-                            Buat Jadwal Periode
-                        </a>
-                    </div>
+                    @if(auth()->user()->hasPermission('schedules.create'))
+                    <a href="{{ route('schedules.create') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-1"></i>
+                        Tambah Jadwal
+                    </a>
                     @endif
                 </div>
             </div>
@@ -98,7 +88,7 @@
                 </div>
 
                 <!-- Bulk Actions -->
-                @if(!auth()->user()->hasRole('karyawan'))
+                @if(auth()->user()->hasPermission('schedules.edit'))
                 <div class="mb-3">
                     <form id="bulk-edit-form" method="POST" action="{{ route('schedules.bulk-edit') }}">
                         @csrf
@@ -118,15 +108,13 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                @if(!auth()->user()->hasRole('karyawan'))
+                                @if(auth()->user()->hasPermission('schedules.edit'))
                                 <th width="40">
                                     <input type="checkbox" id="select-all" class="form-check-input">
                                 </th>
                                 @endif
                                 <th>Tanggal</th>
-                                @if(!auth()->user()->hasRole('karyawan'))
                                 <th>Karyawan</th>
-                                @endif
                                 <th>Shift</th>
                                 <th>Tipe Kerja</th>
                                 <th>Kantor</th>
@@ -137,16 +125,14 @@
                         <tbody>
                             @forelse($schedules as $schedule)
                             <tr>
-                                @if(!auth()->user()->hasRole('karyawan'))
+                                @if(auth()->user()->hasPermission('schedules.edit'))
                                 <td>
                                     <input type="checkbox" name="schedule_ids[]" value="{{ $schedule->id }}"
                                            class="form-check-input schedule-checkbox" form="bulk-edit-form">
                                 </td>
                                 @endif
                                 <td>{{ $schedule->schedule_date->format('d/m/Y') }}</td>
-                                @if(!auth()->user()->hasRole('karyawan'))
                                 <td>{{ $schedule->user->full_name }}</td>
-                                @endif
                                 <td>
                                     <span class="badge bg-info">{{ $schedule->shift->name }}</span>
                                     <br>
@@ -178,10 +164,12 @@
                                         <a href="{{ route('schedules.show', $schedule) }}" class="btn btn-outline-info" title="Lihat Detail">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        @if(!auth()->user()->hasRole('karyawan'))
+                                        @if(auth()->user()->hasPermission('schedules.edit'))
                                         <a href="{{ route('schedules.edit', $schedule) }}" class="btn btn-outline-primary" title="Edit Jadwal">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        @endif
+                                        @if(auth()->user()->hasPermission('schedules.delete'))
                                         <form method="POST" action="{{ route('schedules.destroy', $schedule) }}" class="d-inline">
                                             @csrf
                                             @method('DELETE')
@@ -196,7 +184,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="{{ auth()->user()->hasRole('karyawan') ? '6' : '8' }}" class="text-center py-4">
+                                <td colspan="{{ auth()->user()->hasPermission('schedules.edit') ? '8' : '7' }}" class="text-center py-4">
                                     <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
                                     <p class="text-muted">Tidak ada jadwal ditemukan</p>
                                 </td>
@@ -217,7 +205,6 @@
 @endsection
 
 @push('scripts')
-@if(!auth()->user()->hasRole('karyawan'))
 <script>
 $(document).ready(function() {
     // Handle select all checkbox
@@ -246,5 +233,4 @@ $(document).ready(function() {
     }
 });
 </script>
-@endif
 @endpush

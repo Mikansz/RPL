@@ -299,12 +299,17 @@
 @push('scripts')
 <script>
 function viewDetail(attendanceId) {
+    // Clean up any stuck overlays before opening modal
+    if (window.cleanupStuckOverlays) {
+        window.cleanupStuckOverlays();
+    }
+
     // Implementation would load attendance detail via AJAX
     $('#detailContent').html('<div class="text-center"><div class="spinner-border" role="status"></div></div>');
-    
+
     const modal = new bootstrap.Modal(document.getElementById('detailModal'));
     modal.show();
-    
+
     // Simulate loading detail
     setTimeout(() => {
         $('#detailContent').html('<p>Detail absensi akan ditampilkan di sini</p>');
@@ -320,10 +325,46 @@ function generateReport() {
 }
 
 $(document).ready(function() {
+    console.log('📊 Attendance page loaded, initializing filters');
+
+    // Clean up any stuck overlays on page load
+    if (window.cleanupStuckOverlays) {
+        setTimeout(() => {
+            window.cleanupStuckOverlays();
+        }, 100);
+    }
+
     // Auto-submit form on filter change
     $('select[name="user_id"], select[name="status"]').change(function() {
+        console.log('🔄 Filter changed, submitting form');
         $(this).closest('form').submit();
     });
+
+    // Fix form selects that might be blocked by backdrop
+    $('select.form-select').on('click focus', function(e) {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length > 0) {
+            console.log('🚫 Backdrop blocking select, cleaning up');
+            e.preventDefault();
+            if (window.cleanupStuckOverlays) {
+                window.cleanupStuckOverlays();
+            }
+
+            // Retry opening the select after cleanup
+            setTimeout(() => {
+                $(this).focus();
+            }, 100);
+        }
+    });
+
+    // Ensure all form elements are clickable
+    $('.form-select, .btn').css({
+        'position': 'relative',
+        'z-index': '10',
+        'pointer-events': 'auto'
+    });
+
+    console.log('✅ Attendance filters initialized');
 });
 </script>
 @endpush

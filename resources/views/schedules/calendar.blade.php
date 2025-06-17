@@ -17,10 +17,12 @@
                         <i class="fas fa-list me-1"></i>
                         List View
                     </a>
+                    @if(auth()->user()->hasPermission('schedules.create'))
                     <a href="{{ route('schedules.create') }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus me-1"></i>
                         Tambah Jadwal
                     </a>
+                    @endif
                 </div>
             </div>
             

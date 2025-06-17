@@ -170,7 +170,15 @@ class PayrollController extends Controller
         }
 
         // Get salary components
-        $salaryComponents = $employee->user->salaryComponents()->where('salary_components.is_active', true)->get();
+        $salaryComponents = $employee->user->salaryComponents()
+                                          ->where('salary_components.is_active', true)
+                                          ->wherePivot('is_active', true)
+                                          ->wherePivot('effective_date', '<=', $period->end_date)
+                                          ->where(function($q) use ($period) {
+                                              $q->whereNull('employee_salary_components.end_date')
+                                                ->orWhere('employee_salary_components.end_date', '>=', $period->start_date);
+                                          })
+                                          ->get();
         
         $totalAllowances = 0;
         $totalDeductions = 0;
@@ -180,20 +188,26 @@ class PayrollController extends Controller
 
         foreach ($salaryComponents as $component) {
             // Use pivot amount if available, otherwise use default calculation
-            $customAmount = isset($component->pivot) ? $component->pivot->amount : null;
+            $customAmount = isset($component->pivot) && $component->pivot->amount !== null
+                ? $component->pivot->amount
+                : null;
+
             $amount = $component->calculateAmount($basicSalary, $customAmount);
 
-            if ($component->type === 'allowance') {
-                $totalAllowances += $amount;
-            } elseif ($component->type === 'deduction') {
-                $totalDeductions += $amount;
-            }
+            // Only include components with non-zero amounts
+            if ($amount > 0) {
+                if ($component->type === 'allowance') {
+                    $totalAllowances += $amount;
+                } elseif ($component->type === 'deduction') {
+                    $totalDeductions += $amount;
+                }
 
-            $payrollDetails[] = [
-                'salary_component_id' => $component->id,
-                'amount' => $amount,
-                'calculation_notes' => "Calculated for period {$period->name}",
-            ];
+                $payrollDetails[] = [
+                    'salary_component_id' => $component->id,
+                    'amount' => $amount,
+                    'calculation_notes' => $this->generateCalculationNotes($component, $basicSalary, $customAmount, $period->name),
+                ];
+            }
         }
 
         // Calculate overtime
@@ -237,12 +251,30 @@ class PayrollController extends Controller
         }
     }
 
+    private function generateCalculationNotes($component, $basicSalary, $customAmount, $periodName)
+    {
+        if ($customAmount !== null) {
+            return "Custom amount: Rp " . number_format($customAmount, 0, ',', '.') . " for period {$periodName}";
+        }
+
+        switch ($component->calculation_type) {
+            case 'fixed':
+                return "Fixed amount: Rp " . number_format($component->default_amount, 0, ',', '.') . " for period {$periodName}";
+            case 'percentage':
+                return "Percentage: {$component->percentage}% of basic salary (Rp " . number_format($basicSalary, 0, ',', '.') . ") for period {$periodName}";
+            case 'formula':
+                return "Formula calculation: {$component->formula} for period {$periodName}";
+            default:
+                return "Calculated for period {$periodName}";
+        }
+    }
+
     private function calculateTax($grossSalary)
     {
         // Simplified tax calculation (PPh 21)
         // This should be more complex in real implementation
         $taxableIncome = max(0, $grossSalary - 4500000); // PTKP per month
-        
+
         if ($taxableIncome <= 5000000) {
             return $taxableIncome * 0.05;
         } elseif ($taxableIncome <= 25000000) {

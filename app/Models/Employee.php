@@ -23,9 +23,6 @@ class Employee extends Model
         'bank_name',
         'bank_account',
         'bank_account_name',
-        'default_shift_id',
-        'default_office_id',
-        'default_work_type',
     ];
 
     protected $casts = [
@@ -54,16 +51,6 @@ class Employee extends Model
     public function supervisor()
     {
         return $this->belongsTo(User::class, 'supervisor_id');
-    }
-
-    public function defaultShift()
-    {
-        return $this->belongsTo(\App\Models\Shift::class, 'default_shift_id');
-    }
-
-    public function defaultOffice()
-    {
-        return $this->belongsTo(\App\Models\Office::class, 'default_office_id');
     }
 
     // Scopes

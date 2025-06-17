@@ -73,9 +73,34 @@ class SalaryComponentController extends Controller
 
     public function destroy(SalaryComponent $salaryComponent)
     {
+        // Check if component is being used by any employees
+        $employeeCount = $salaryComponent->employees()->count();
+
+        if ($employeeCount > 0) {
+            return back()->with('error', "Komponen gaji tidak dapat dihapus karena sedang digunakan oleh {$employeeCount} karyawan. Nonaktifkan komponen ini sebagai gantinya.");
+        }
+
+        // Check if component is used in any payroll details
+        $payrollDetailCount = $salaryComponent->payrollDetails()->count();
+
+        if ($payrollDetailCount > 0) {
+            return back()->with('error', "Komponen gaji tidak dapat dihapus karena sudah digunakan dalam {$payrollDetailCount} record payroll. Nonaktifkan komponen ini sebagai gantinya.");
+        }
+
         $salaryComponent->delete();
 
         return redirect()->route('salary-components.index')
-                        ->with('success', 'Salary component deleted successfully.');
+                        ->with('success', 'Komponen gaji berhasil dihapus.');
+    }
+
+    public function toggleStatus(SalaryComponent $salaryComponent)
+    {
+        $salaryComponent->update([
+            'is_active' => !$salaryComponent->is_active
+        ]);
+
+        $status = $salaryComponent->is_active ? 'diaktifkan' : 'dinonaktifkan';
+
+        return back()->with('success', "Komponen gaji berhasil {$status}.");
     }
 }

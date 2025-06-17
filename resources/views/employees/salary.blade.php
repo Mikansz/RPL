@@ -86,9 +86,16 @@
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-coins me-2"></i>Komponen Gaji Aktif</h5>
-                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addComponentModal">
-                    <i class="fas fa-plus me-1"></i>Tambah Komponen
-                </button>
+                <div>
+                    @if($availableComponents->where('type', 'allowance')->count() > 0)
+                    <button type="button" class="btn btn-sm btn-success me-2" onclick="assignDefaultAllowances()">
+                        <i class="fas fa-magic me-1"></i>Tambah Tunjangan Default
+                    </button>
+                    @endif
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addComponentModal">
+                        <i class="fas fa-plus me-1"></i>Tambah Komponen
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 @if($employee->user->salaryComponents->count() > 0)
@@ -262,18 +269,99 @@ $(document).ready(function() {
 });
 
 function editComponent(componentId, name, amount, effectiveDate) {
-    // This would open an edit modal - simplified for now
     const newAmount = prompt(`Edit nominal untuk ${name}:`, amount);
-    if (newAmount !== null && newAmount !== '') {
-        // Submit form to update component
-        alert('Fitur edit akan diimplementasikan');
+    if (newAmount !== null && newAmount !== '' && !isNaN(newAmount)) {
+        // Create a form to update the component
+        const form = $('<form>', {
+            method: 'POST',
+            action: '{{ route("employees.salary.update", $employee) }}'
+        });
+
+        // Add CSRF token
+        form.append($('<input>', {
+            type: 'hidden',
+            name: '_token',
+            value: '{{ csrf_token() }}'
+        }));
+
+        // Add basic salary (required field)
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'basic_salary',
+            value: '{{ $employee->basic_salary }}'
+        }));
+
+        // Add component data
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'components[0][component_id]',
+            value: componentId
+        }));
+
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'components[0][amount]',
+            value: newAmount
+        }));
+
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'components[0][effective_date]',
+            value: effectiveDate
+        }));
+
+        // Submit form
+        $('body').append(form);
+        form.submit();
     }
 }
 
 function removeComponent(componentId) {
     if (confirm('Apakah Anda yakin ingin menghapus komponen gaji ini?')) {
-        // Submit form to remove component
-        alert('Fitur hapus akan diimplementasikan');
+        // Create a form to remove the component
+        const form = $('<form>', {
+            method: 'POST',
+            action: '{{ route("employees.salary.remove", $employee) }}'
+        });
+
+        // Add CSRF token
+        form.append($('<input>', {
+            type: 'hidden',
+            name: '_token',
+            value: '{{ csrf_token() }}'
+        }));
+
+        // Add component ID
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'component_id',
+            value: componentId
+        }));
+
+        // Submit form
+        $('body').append(form);
+        form.submit();
+    }
+}
+
+function assignDefaultAllowances() {
+    if (confirm('Apakah Anda yakin ingin menambahkan semua tunjangan default untuk karyawan ini?')) {
+        // Create a form to assign default allowances
+        const form = $('<form>', {
+            method: 'POST',
+            action: '{{ route("employees.salary.assign-defaults", $employee) }}'
+        });
+
+        // Add CSRF token
+        form.append($('<input>', {
+            type: 'hidden',
+            name: '_token',
+            value: '{{ csrf_token() }}'
+        }));
+
+        // Submit form
+        $('body').append(form);
+        form.submit();
     }
 }
 </script>

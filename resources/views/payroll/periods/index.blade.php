@@ -93,12 +93,12 @@
                 </a>
             </div>
             <div class="col-md-4 mb-2">
-                <button type="button" class="btn btn-info w-100" onclick="exportPeriods()">
+                <button type="button" class="btn btn-info w-100" onclick="showExportModal()">
                     <i class="fas fa-download me-2"></i>Export Data
                 </button>
             </div>
             <div class="col-md-4 mb-2">
-                <button type="button" class="btn btn-warning w-100" onclick="generateReport()">
+                <button type="button" class="btn btn-warning w-100" onclick="showReportModal()">
                     <i class="fas fa-chart-bar me-2"></i>Generate Report
                 </button>
             </div>
@@ -175,19 +175,27 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ route('payroll.periods.calculate', $period) }}" 
+                                    <a href="{{ route('payroll.periods.calculate', $period) }}"
                                        class="btn btn-outline-info" title="Calculate">
                                         <i class="fas fa-calculator"></i>
                                     </a>
                                     @if(auth()->user()->hasPermission('payroll.approve'))
                                         @if($period->status === 'calculated')
-                                        <button type="button" class="btn btn-outline-success" 
+                                        <button type="button" class="btn btn-outline-success"
                                                 onclick="approvePeriod({{ $period->id }})" title="Approve Period">
                                             <i class="fas fa-check"></i>
                                         </button>
                                         @endif
                                     @endif
-                                    <button type="button" class="btn btn-outline-primary" 
+                                    <a href="{{ route('payroll.periods.report', $period) }}"
+                                       class="btn btn-outline-warning" title="Generate Report">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </a>
+                                    <a href="{{ route('payroll.periods.export', $period) }}"
+                                       class="btn btn-outline-success" title="Export CSV">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-primary"
                                             onclick="viewPeriodDetail({{ $period->id }})" title="Detail">
                                         <i class="fas fa-eye"></i>
                                     </button>
@@ -217,6 +225,69 @@
         @endif
     </div>
 </div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModalLabel">Export Data Periode</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="mb-3">
+                        <label for="export_start_date" class="form-label">Tanggal Mulai</label>
+                        <input type="date" class="form-control" id="export_start_date"
+                               value="{{ now()->startOfYear()->format('Y-m-d') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="export_end_date" class="form-label">Tanggal Akhir</label>
+                        <input type="date" class="form-control" id="export_end_date"
+                               value="{{ now()->endOfYear()->format('Y-m-d') }}">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-success" onclick="exportAllPeriods()">
+                    <i class="fas fa-download me-2"></i>Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportModalLabel">Generate Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Pilih periode untuk generate report:</p>
+                <div class="list-group">
+                    @foreach($periods as $period)
+                    <a href="{{ route('payroll.periods.report', $period) }}"
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ $period->name }}</h6>
+                            <small>{{ $period->start_date->format('M Y') }}</small>
+                        </div>
+                        <p class="mb-1">{{ $period->start_date->format('d M Y') }} - {{ $period->end_date->format('d M Y') }}</p>
+                        <small>Status: {{ ucfirst($period->status) }}</small>
+                    </a>
+                    @endforeach
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -243,15 +314,32 @@ function approvePeriod(periodId) {
 }
 
 function viewPeriodDetail(periodId) {
-    alert('Detail periode akan ditampilkan');
+    // Redirect to period report page
+    window.location.href = `/payroll/periods/${periodId}/report`;
 }
 
-function exportPeriods() {
-    alert('Fitur export akan diimplementasikan');
+function showExportModal() {
+    // Show modal for date range selection
+    $('#exportModal').modal('show');
 }
 
-function generateReport() {
-    alert('Fitur generate report akan diimplementasikan');
+function showReportModal() {
+    // Show modal for report generation options
+    $('#reportModal').modal('show');
+}
+
+function exportAllPeriods() {
+    const startDate = document.getElementById('export_start_date').value;
+    const endDate = document.getElementById('export_end_date').value;
+
+    if (!startDate || !endDate) {
+        alert('Silakan pilih tanggal mulai dan tanggal akhir');
+        return;
+    }
+
+    // Download export
+    window.location.href = `{{ route('payroll.periods.export-all') }}?start_date=${startDate}&end_date=${endDate}`;
+    $('#exportModal').modal('hide');
 }
 </script>
 @endpush

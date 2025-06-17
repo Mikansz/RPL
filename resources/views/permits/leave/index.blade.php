@@ -1,66 +1,220 @@
 @extends('layouts.app')
 
-@section('title', 'Daftar Cuti')
-@section('page-title', 'Daftar Permohonan Cuti')
+@section('title', 'Manajemen Cuti')
+@section('page-title', 'Manajemen Cuti Modern')
+
+@push('styles')
+<style>
+.leave-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    transition: all 0.4s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.leave-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    pointer-events: none;
+}
+
+.leave-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+}
+
+.leave-card.remaining {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.leave-card.approved {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.leave-card.pending {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.leave-card.total {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stats-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    backdrop-filter: blur(10px);
+}
+
+.quick-action-btn {
+    border-radius: 15px;
+    padding: 15px 25px;
+    font-weight: 600;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-action-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.quick-action-btn:hover::before {
+    left: 100%;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.modern-card {
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.modern-card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 25px 30px;
+    position: relative;
+}
+
+.modern-card-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);
+}
+
+.pulse-animation {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+</style>
+@endpush
 
 @section('content')
-<!-- Statistics Cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-1">Sisa Cuti</h6>
-                        <h4 class="mb-0">{{ $totalRemainingDays ?? 12 }} hari</h4>
-                    </div>
-                    <div>
-                        <i class="fas fa-calendar-check fa-2x opacity-75"></i>
-                    </div>
+<!-- Enhanced Statistics Cards -->
+<div class="row mb-5">
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card leave-card remaining text-white h-100">
+            <div class="card-body d-flex align-items-center p-4">
+                <div class="stats-icon me-4">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div>
+                    <h6 class="card-title mb-2 opacity-90 fw-light">Sisa Cuti</h6>
+                    <h2 class="mb-1 fw-bold">{{ $totalRemainingDays ?? 12 }}</h2>
+                    <small class="opacity-75 fw-medium">hari tersisa</small>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-1">Cuti Disetujui</h6>
-                        <h4 class="mb-0">{{ $approvedLeaves ?? 0 }} hari</h4>
-                    </div>
-                    <div>
-                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                    </div>
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card leave-card approved text-white h-100">
+            <div class="card-body d-flex align-items-center p-4">
+                <div class="stats-icon me-4">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <h6 class="card-title mb-2 opacity-90 fw-light">Cuti Disetujui</h6>
+                    <h2 class="mb-1 fw-bold">{{ $approvedLeaves ?? 0 }}</h2>
+                    <small class="opacity-75 fw-medium">hari disetujui</small>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-1">Menunggu Persetujuan</h6>
-                        <h4 class="mb-0">{{ $pendingLeaves ?? 0 }}</h4>
-                    </div>
-                    <div>
-                        <i class="fas fa-clock fa-2x opacity-75"></i>
-                    </div>
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card leave-card pending text-white h-100 {{ ($pendingLeaves ?? 0) > 0 ? 'pulse-animation' : '' }}">
+            <div class="card-body d-flex align-items-center p-4">
+                <div class="stats-icon me-4">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <h6 class="card-title mb-2 opacity-90 fw-light">Menunggu</h6>
+                    <h2 class="mb-1 fw-bold">{{ $pendingLeaves ?? 0 }}</h2>
+                    <small class="opacity-75 fw-medium">hari pending</small>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="card-title mb-1">Total Permohonan</h6>
-                        <h4 class="mb-0">{{ $totalLeaves ?? 0 }}</h4>
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card leave-card total text-white h-100">
+            <div class="card-body d-flex align-items-center p-4">
+                <div class="stats-icon me-4">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <div>
+                    <h6 class="card-title mb-2 opacity-90 fw-light">Total Permohonan</h6>
+                    <h2 class="mb-1 fw-bold">{{ $totalLeaves ?? 0 }}</h2>
+                    <small class="opacity-75 fw-medium">permohonan</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card modern-card">
+            <div class="modern-card-header">
+                <h5 class="mb-0 fw-bold"><i class="fas fa-bolt me-3"></i>Aksi Cepat</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-lg-3 col-md-6">
+                        <a href="{{ route('permits.leave.create') }}" class="btn btn-primary quick-action-btn w-100">
+                            <i class="fas fa-plus me-2"></i>Ajukan Cuti Baru
+                        </a>
                     </div>
-                    <div>
-                        <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                    <div class="col-lg-3 col-md-6">
+                        <button type="button" class="btn btn-success quick-action-btn w-100" onclick="showCalendarView()">
+                            <i class="fas fa-calendar-alt me-2"></i>Lihat Kalender
+                        </button>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <button type="button" class="btn btn-info quick-action-btn w-100" onclick="exportLeaveData()">
+                            <i class="fas fa-download me-2"></i>Export Data
+                        </button>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <button type="button" class="btn btn-warning quick-action-btn w-100" onclick="showLeaveBalance()">
+                            <i class="fas fa-chart-pie me-2"></i>Saldo Cuti
+                        </button>
                     </div>
                 </div>
             </div>
@@ -124,18 +278,11 @@
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ route('permits.leave.show', $leave) }}"
+                                    <a href="{{ route('permits.leave.show', $leave) }}" 
                                        class="btn btn-sm btn-outline-primary" title="Lihat Detail">
                                         <i class="fas fa-eye"></i>
                                     </a>
-
-                                    @if($leave->status === 'approved')
-                                        <a href="{{ route('permits.leave.slip', $leave) }}"
-                                           class="btn btn-sm btn-outline-success" title="Cetak Slip" target="_blank">
-                                            <i class="fas fa-print"></i>
-                                        </a>
-                                    @endif
-
+                                    
                                     @if($leave->status == 'pending' && $leave->canBeEdited())
                                         <a href="{{ route('permits.leave.edit', $leave) }}" 
                                            class="btn btn-sm btn-outline-warning" title="Edit">

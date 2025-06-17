@@ -151,62 +151,6 @@
                         </div>
                     </div>
 
-                    <!-- Default Schedule Settings -->
-                    <div class="card bg-light mb-3">
-                        <div class="card-header">
-                            <h6 class="mb-0">Pengaturan Jadwal Default</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="default_shift_id" class="form-label">Shift Default <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('default_shift_id') is-invalid @enderror"
-                                            id="default_shift_id" name="default_shift_id" required>
-                                        <option value="">Pilih Shift</option>
-                                        @foreach($shifts as $shift)
-                                            <option value="{{ $shift->id }}" {{ old('default_shift_id') == $shift->id ? 'selected' : '' }}>
-                                                {{ $shift->name }} ({{ $shift->formatted_start_time }} - {{ $shift->formatted_end_time }})
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('default_shift_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <label for="default_work_type" class="form-label">Tipe Kerja Default <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('default_work_type') is-invalid @enderror"
-                                            id="default_work_type" name="default_work_type" required>
-                                        <option value="">Pilih Tipe Kerja</option>
-                                        <option value="WFO" {{ old('default_work_type') == 'WFO' ? 'selected' : '' }}>Work From Office (WFO)</option>
-                                        <option value="WFA" {{ old('default_work_type') == 'WFA' ? 'selected' : '' }}>Work From Anywhere (WFA)</option>
-                                    </select>
-                                    @error('default_work_type')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <label for="default_office_id" class="form-label">Office Default</label>
-                                    <select class="form-select @error('default_office_id') is-invalid @enderror"
-                                            id="default_office_id" name="default_office_id">
-                                        <option value="">Pilih Office</option>
-                                        @foreach($offices as $office)
-                                            <option value="{{ $office->id }}" {{ old('default_office_id') == $office->id ? 'selected' : '' }}>
-                                                {{ $office->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('default_office_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <small class="text-muted">Wajib diisi untuk tipe kerja WFO</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Bank Information -->
                     <div class="card bg-light mb-3">
                         <div class="card-header">
@@ -341,26 +285,6 @@ $(document).ready(function() {
         let value = $(this).val().replace(/[^\d]/g, '');
         $(this).val(value);
     });
-
-    // Handle work type change for office requirement
-    $('#default_work_type').change(function() {
-        const workType = $(this).val();
-        const officeSelect = $('#default_office_id');
-
-        if (workType === 'WFO') {
-            officeSelect.prop('required', true);
-            officeSelect.closest('.mb-3').find('label').html('Office Default <span class="text-danger">*</span>');
-        } else {
-            officeSelect.prop('required', false);
-            officeSelect.closest('.mb-3').find('label').html('Office Default');
-            officeSelect.val(''); // Clear selection for WFA
-        }
-    });
-
-    // Trigger work type change on page load if value exists
-    if ($('#default_work_type').val()) {
-        $('#default_work_type').trigger('change');
-    }
 });
 </script>
 @endpush

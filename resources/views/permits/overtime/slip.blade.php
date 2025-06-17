@@ -3,147 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slip Lembur - {{ $overtime->user->full_name }}</title>
+    <title>Slip Lembur - {{ $overtime->user->name }}</title>
     <style>
-        @media print {
-            body { margin: 0; }
-            .no-print { display: none !important; }
-            .page-break { page-break-after: always; }
-        }
-        
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #333;
-            margin: 20px;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
         }
-        
         .slip-container {
             max-width: 800px;
             margin: 0 auto;
             background: white;
             padding: 30px;
-            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
+            border-bottom: 2px solid #007bff;
             padding-bottom: 20px;
+            margin-bottom: 30px;
         }
-        
         .company-name {
-            font-size: 18px;
+            font-size: 24px;
             font-weight: bold;
+            color: #007bff;
             margin-bottom: 5px;
         }
-        
-        .company-address {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 15px;
-        }
-        
         .slip-title {
-            font-size: 16px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 18px;
+            color: #333;
+            margin-top: 10px;
         }
-        
         .slip-number {
-            font-size: 11px;
+            font-size: 14px;
             color: #666;
             margin-top: 5px;
         }
-        
-        .content {
-            margin-bottom: 30px;
-        }
-        
         .info-section {
             margin-bottom: 25px;
         }
-        
-        .section-title {
-            font-weight: bold;
-            font-size: 13px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 5px;
-        }
-        
         .info-row {
             display: flex;
-            margin-bottom: 8px;
-            align-items: flex-start;
+            margin-bottom: 10px;
+            align-items: center;
         }
-        
         .info-label {
-            width: 180px;
+            width: 200px;
             font-weight: bold;
-            flex-shrink: 0;
+            color: #333;
         }
-        
         .info-value {
             flex: 1;
-            border-bottom: 1px dotted #ccc;
-            padding-bottom: 2px;
-            min-height: 16px;
+            color: #555;
         }
-        
-        .reason-box {
-            border: 1px solid #ccc;
-            padding: 10px;
-            min-height: 60px;
-            background-color: #f9f9f9;
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
         }
-        
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .calculation-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .calculation-title {
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .amount-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }
+        .amount-total {
+            border-top: 2px solid #007bff;
+            padding-top: 10px;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 16px;
+        }
         .signature-section {
             margin-top: 40px;
             display: flex;
             justify-content: space-between;
         }
-        
         .signature-box {
             text-align: center;
             width: 200px;
         }
-        
-        .signature-title {
-            font-weight: bold;
-            margin-bottom: 60px;
-        }
-        
         .signature-line {
             border-top: 1px solid #333;
-            margin-top: 10px;
+            margin-top: 60px;
             padding-top: 5px;
         }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        
-        .status-approved {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
         .print-button {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #007bff;
+            background-color: #007bff;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -151,170 +129,150 @@
             cursor: pointer;
             font-size: 14px;
         }
-        
         .print-button:hover {
-            background: #0056b3;
+            background-color: #0056b3;
         }
-        
-        .footer-note {
-            margin-top: 30px;
-            font-size: 10px;
-            color: #666;
-            text-align: center;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-        }
-        
-        .amount-highlight {
-            background-color: #fff3cd;
-            padding: 8px;
-            border: 1px solid #ffeaa7;
-            border-radius: 4px;
-            font-weight: bold;
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .slip-container {
+                box-shadow: none;
+                padding: 0;
+            }
+            .print-button {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
-    <button class="print-button no-print" onclick="window.print()">
-        <i class="fas fa-print"></i> Cetak Slip
+    <button class="print-button" onclick="window.print()">
+        <i class="fas fa-print"></i> Print
     </button>
 
     <div class="slip-container">
         <div class="header">
-            <div class="company-name">PT. RHI (RIAU HIJAU INDONESIA)</div>
-            <div class="company-address">
-                Jl. Contoh Alamat No. 123, Kota, Provinsi 12345<br>
-                Telp: (021) 1234-5678 | Email: info@rhi.com
-            </div>
-            <div class="slip-title">Slip Lembur</div>
-            <div class="slip-number">No: SLIP-OT/{{ $overtime->id }}/{{ date('Y') }}</div>
+            <div class="company-name">PT. GAX INDONESIA</div>
+            <div class="slip-title">SLIP LEMBUR KARYAWAN</div>
+            <div class="slip-number">No: OT-{{ str_pad($overtime->id, 6, '0', STR_PAD_LEFT) }}</div>
         </div>
 
-        <div class="content">
-            <!-- Employee Information -->
-            <div class="info-section">
-                <div class="section-title">Data Karyawan</div>
-                <div class="info-row">
-                    <div class="info-label">Nama Lengkap</div>
-                    <div class="info-value">{{ $overtime->user->full_name }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">ID Karyawan</div>
-                    <div class="info-value">{{ $overtime->user->employee_id ?? '-' }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Departemen</div>
-                    <div class="info-value">{{ $overtime->user->employee->department->name ?? '-' }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Jabatan</div>
-                    <div class="info-value">{{ $overtime->user->employee->position->name ?? '-' }}</div>
-                </div>
+        <div class="info-section">
+            <div class="info-row">
+                <div class="info-label">Nama Karyawan:</div>
+                <div class="info-value">{{ $overtime->user->name }}</div>
             </div>
-
-            <!-- Overtime Information -->
-            <div class="info-section">
-                <div class="section-title">Data Lembur</div>
-                <div class="info-row">
-                    <div class="info-label">Tanggal Lembur</div>
-                    <div class="info-value">{{ $overtime->overtime_date->format('d F Y') }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Jam Mulai</div>
-                    <div class="info-value">{{ $overtime->start_time }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Jam Selesai</div>
-                    <div class="info-value">{{ $overtime->end_time }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Durasi Rencana</div>
-                    <div class="info-value">{{ $overtime->planned_hours }} jam</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Durasi Aktual</div>
-                    <div class="info-value">{{ $overtime->actual_hours ?? $overtime->planned_hours }} jam</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Status</div>
-                    <div class="info-value">
-                        <span class="status-badge status-approved">{{ strtoupper($overtime->status) }}</span>
-                    </div>
-                </div>
+            <div class="info-row">
+                <div class="info-label">ID Karyawan:</div>
+                <div class="info-value">{{ $overtime->user->employee->employee_id ?? 'N/A' }}</div>
             </div>
-
-            <!-- Work Description -->
-            <div class="info-section">
-                <div class="section-title">Deskripsi Pekerjaan</div>
-                <div class="reason-box">
-                    {{ $overtime->work_description }}
-                </div>
+            <div class="info-row">
+                <div class="info-label">Departemen:</div>
+                <div class="info-value">{{ $overtime->user->employee->department->name ?? 'N/A' }}</div>
             </div>
-
-            <!-- Reason -->
-            <div class="info-section">
-                <div class="section-title">Alasan Lembur</div>
-                <div class="reason-box">
-                    {{ $overtime->reason }}
-                </div>
-            </div>
-
-            @if($overtime->overtime_amount)
-            <!-- Overtime Compensation -->
-            <div class="info-section">
-                <div class="section-title">Kompensasi Lembur</div>
-                <div class="info-row">
-                    <div class="info-label">Tarif per Jam</div>
-                    <div class="info-value">Rp {{ number_format($overtime->overtime_rate ?? 0, 0, ',', '.') }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Total Kompensasi</div>
-                    <div class="info-value amount-highlight">Rp {{ number_format($overtime->overtime_amount, 0, ',', '.') }}</div>
-                </div>
-            </div>
-            @endif
-
-            <!-- Approval Information -->
-            <div class="info-section">
-                <div class="section-title">Data Persetujuan</div>
-                <div class="info-row">
-                    <div class="info-label">Disetujui Oleh</div>
-                    <div class="info-value">{{ $overtime->approvedBy->full_name ?? '-' }}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">Tanggal Persetujuan</div>
-                    <div class="info-value">{{ $overtime->approved_at ? $overtime->approved_at->format('d F Y H:i') : '-' }}</div>
-                </div>
-                @if($overtime->approval_notes)
-                <div class="info-row">
-                    <div class="info-label">Catatan Persetujuan</div>
-                    <div class="info-value">{{ $overtime->approval_notes }}</div>
-                </div>
-                @endif
+            <div class="info-row">
+                <div class="info-label">Posisi:</div>
+                <div class="info-value">{{ $overtime->user->employee->position->name ?? 'N/A' }}</div>
             </div>
         </div>
 
-        <!-- Signatures -->
+        <div class="info-section">
+            <div class="info-row">
+                <div class="info-label">Tanggal Lembur:</div>
+                <div class="info-value">{{ $overtime->overtime_date->format('d F Y') }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Jam Mulai:</div>
+                <div class="info-value">{{ $overtime->start_time->format('H:i') }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Jam Selesai:</div>
+                <div class="info-value">{{ $overtime->end_time->format('H:i') }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Durasi:</div>
+                <div class="info-value">{{ $overtime->planned_hours }} jam</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Status:</div>
+                <div class="info-value">
+                    @if($overtime->status === 'approved')
+                        <span class="status-badge status-approved">Disetujui</span>
+                    @elseif($overtime->status === 'pending')
+                        <span class="status-badge status-pending">Pending</span>
+                    @else
+                        <span class="status-badge status-rejected">Ditolak</span>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-row">
+                <div class="info-label">Deskripsi Pekerjaan:</div>
+                <div class="info-value">{{ $overtime->work_description }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Alasan Lembur:</div>
+                <div class="info-value">{{ $overtime->reason }}</div>
+            </div>
+        </div>
+
+        @if($overtime->status === 'approved')
+        <div class="calculation-section">
+            <div class="calculation-title">Perhitungan Lembur</div>
+            <div class="amount-row">
+                <span>Jam Lembur:</span>
+                <span>{{ $overtime->actual_hours ?? $overtime->planned_hours }} jam</span>
+            </div>
+            <div class="amount-row">
+                <span>Tarif per Jam:</span>
+                <span>Rp {{ number_format($overtime->overtime_rate ?? 0, 0, ',', '.') }}</span>
+            </div>
+            <div class="amount-row">
+                <span>Multiplier:</span>
+                <span>1.5x</span>
+            </div>
+            <div class="amount-row amount-total">
+                <span>Total Lembur:</span>
+                <span>Rp {{ number_format($overtime->overtime_amount ?? 0, 0, ',', '.') }}</span>
+            </div>
+        </div>
+        @endif
+
+        @if($overtime->status === 'approved')
+        <div class="info-section">
+            <div class="info-row">
+                <div class="info-label">Disetujui Oleh:</div>
+                <div class="info-value">{{ $overtime->approvedBy->name ?? 'N/A' }}</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Tanggal Persetujuan:</div>
+                <div class="info-value">{{ $overtime->approved_at ? $overtime->approved_at->format('d F Y H:i') : 'N/A' }}</div>
+            </div>
+        </div>
+        @endif
+
         <div class="signature-section">
             <div class="signature-box">
-                <div class="signature-title">Pemohon</div>
-                <div class="signature-line">{{ $overtime->user->full_name }}</div>
+                <div>Karyawan</div>
+                <div class="signature-line">{{ $overtime->user->name }}</div>
             </div>
             <div class="signature-box">
-                <div class="signature-title">Atasan Langsung</div>
-                <div class="signature-line">{{ $overtime->approvedBy->full_name ?? '________________' }}</div>
+                <div>Atasan Langsung</div>
+                <div class="signature-line">{{ $overtime->approvedBy->name ?? '________________' }}</div>
+            </div>
+            <div class="signature-box">
+                <div>HRD</div>
+                <div class="signature-line">________________</div>
             </div>
         </div>
 
-        <div class="footer-note">
-            Slip ini digenerate secara otomatis pada {{ now()->format('d F Y H:i:s') }}<br>
-            Dokumen ini sah tanpa tanda tangan basah
+        <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
+            Slip ini dicetak pada {{ now()->format('d F Y H:i') }}
         </div>
     </div>
-
-    <script>
-        // Auto print when page loads (optional)
-        // window.onload = function() { window.print(); }
-    </script>
 </body>
 </html>

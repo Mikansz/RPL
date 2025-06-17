@@ -14,6 +14,7 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         \App\Models\OvertimeRequest::class => \App\Policies\OvertimeRequestPolicy::class,
+        \App\Models\LeaveRequest::class => \App\Policies\LeaveRequestPolicy::class,
     ];
 
     /**

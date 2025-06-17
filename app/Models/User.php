@@ -148,9 +148,12 @@ class User extends Authenticatable
     public function getCurrentSalaryComponents()
     {
         return $this->salaryComponents()
-                    ->where('salary_components.is_active', true)
                     ->wherePivot('is_active', true)
-                    ->wherePivot('effective_date', '<=', now());
+                    ->wherePivot('effective_date', '<=', now())
+                    ->where(function ($query) {
+                        $query->wherePivotNull('end_date')
+                              ->orWherePivot('end_date', '>=', now());
+                    });
     }
 
     // Schedule helper methods
@@ -182,72 +185,13 @@ class User extends Authenticatable
     public function canClockInToday()
     {
         $todaySchedule = $this->getTodaySchedule();
-        if ($todaySchedule) {
-            return true;
-        }
-
-        // Check if can create schedule using default settings
-        if (!$this->employee || !$this->employee->default_shift_id) {
-            return false;
-        }
-
-        // For WFO, office is required
-        if ($this->employee->default_work_type === 'WFO' && !$this->employee->default_office_id) {
-            return false;
-        }
-
-        return true;
+        return $todaySchedule !== null;
     }
 
     public function getTodayWorkType()
     {
         $todaySchedule = $this->getTodaySchedule();
         return $todaySchedule ? $todaySchedule->work_type : null;
-    }
-
-    public function getOrCreateTodaySchedule()
-    {
-        // First try to get existing schedule
-        $todaySchedule = $this->getTodaySchedule();
-        if ($todaySchedule) {
-            return $todaySchedule;
-        }
-
-        // If no schedule exists, create one using employee's default settings
-        if (!$this->employee) {
-            return null;
-        }
-
-        $employee = $this->employee;
-
-        // Check if employee has default shift and office (for WFO)
-        if (!$employee->default_shift_id) {
-            return null;
-        }
-
-        // For WFO, office is required
-        if ($employee->default_work_type === 'WFO' && !$employee->default_office_id) {
-            return null;
-        }
-
-        // Create new schedule for today
-        $scheduleData = [
-            'user_id' => $this->id,
-            'shift_id' => $employee->default_shift_id,
-            'office_id' => $employee->default_work_type === 'WFO' ? $employee->default_office_id : null,
-            'schedule_date' => today(),
-            'work_type' => $employee->default_work_type,
-            'status' => 'approved',
-            'notes' => 'Auto-generated schedule',
-            'created_by' => $this->id,
-            'approved_by' => $this->id,
-            'approved_at' => now(),
-        ];
-
-        $schedule = \App\Models\Schedule::create($scheduleData);
-
-        // Load relationships
-        return $schedule->load(['shift', 'office']);
     }
 
     public function notificationSettings()

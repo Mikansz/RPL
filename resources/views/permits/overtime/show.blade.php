@@ -150,12 +150,6 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    @if($overtime->status === 'approved')
-                    <a href="{{ route('permits.overtime.slip', $overtime) }}" class="btn btn-info" target="_blank">
-                        <i class="fas fa-print me-2"></i>Cetak Slip Lembur
-                    </a>
-                    @endif
-
                     <a href="{{ route('permits.overtime.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Kembali ke Daftar
                     </a>

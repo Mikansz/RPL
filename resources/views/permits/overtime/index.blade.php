@@ -119,22 +119,13 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('permits.overtime.show', $overtime) }}"
-                                               class="btn btn-outline-info"
-                                               data-bs-toggle="tooltip"
+                                            <a href="{{ route('permits.overtime.show', $overtime) }}" 
+                                               class="btn btn-outline-info" 
+                                               data-bs-toggle="tooltip" 
                                                title="Lihat Detail">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-
-                                            @if($overtime->status === 'approved')
-                                                <a href="{{ route('permits.overtime.slip', $overtime) }}"
-                                                   class="btn btn-outline-success"
-                                                   data-bs-toggle="tooltip"
-                                                   title="Cetak Slip" target="_blank">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                            @endif
-
+                                            
                                             @if($overtime->canBeEdited())
                                                 <a href="{{ route('permits.overtime.edit', $overtime) }}" 
                                                    class="btn btn-outline-primary" 

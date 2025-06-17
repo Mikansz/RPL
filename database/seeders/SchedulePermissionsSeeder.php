@@ -43,11 +43,11 @@ class SchedulePermissionsSeeder extends Seeder
             );
         }
 
-        // Assign permissions to roles
-        $adminRole = Role::where('name', 'admin')->first();
-        $hrRole = Role::where('name', 'hr')->first();
-        $managerRole = Role::where('name', 'manager')->first();
-        $karyawanRole = Role::where('name', 'karyawan')->first();
+        // Assign permissions to roles - check multiple role name variations
+        $adminRole = Role::whereIn('name', ['admin', 'Admin'])->first();
+        $hrRole = Role::whereIn('name', ['hr', 'HR', 'hrd', 'HRD'])->first();
+        $managerRole = Role::whereIn('name', ['manager', 'Manager'])->first();
+        $karyawanRole = Role::whereIn('name', ['karyawan', 'employee', 'Employee'])->first();
 
         if ($adminRole) {
             // Admin gets all permissions

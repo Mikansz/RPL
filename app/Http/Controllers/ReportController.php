@@ -109,7 +109,7 @@ class ReportController extends Controller
     {
         $startDate = $request->get('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->get('end_date', now()->endOfMonth()->format('Y-m-d'));
-        
+
         switch ($type) {
             case 'attendance':
                 return $this->exportAttendance($startDate, $endDate);
@@ -117,9 +117,74 @@ class ReportController extends Controller
                 return $this->exportPayroll($startDate, $endDate);
             case 'employees':
                 return $this->exportEmployees();
+            case 'leaves':
+                return $this->exportLeaves($startDate, $endDate);
+            case 'overtime':
+                return $this->exportOvertime($startDate, $endDate);
             default:
                 return redirect()->back()->with('error', 'Invalid export type.');
         }
+    }
+
+    public function ceoReports(Request $request)
+    {
+        $startDate = $request->get('start_date', now()->startOfMonth()->format('Y-m-d'));
+        $endDate = $request->get('end_date', now()->endOfMonth()->format('Y-m-d'));
+
+        // Get all available reports for CEO
+        $reports = [
+            'hr' => [
+                'title' => 'Laporan HR',
+                'description' => 'Laporan karyawan, departemen, dan posisi',
+                'icon' => 'fas fa-users',
+                'color' => 'info',
+                'route' => 'reports.hr',
+                'export' => 'employees'
+            ],
+            'attendance' => [
+                'title' => 'Laporan Absensi',
+                'description' => 'Laporan kehadiran, keterlambatan, dan absensi karyawan',
+                'icon' => 'fas fa-clock',
+                'color' => 'primary',
+                'route' => 'reports.attendance',
+                'export' => 'attendance'
+            ],
+            'financial' => [
+                'title' => 'Laporan Keuangan',
+                'description' => 'Laporan payroll dan keuangan perusahaan',
+                'icon' => 'fas fa-chart-line',
+                'color' => 'success',
+                'route' => 'reports.financial',
+                'export' => 'payroll'
+            ],
+            'leaves' => [
+                'title' => 'Laporan Cuti',
+                'description' => 'Laporan penggunaan cuti dan izin karyawan',
+                'icon' => 'fas fa-calendar-times',
+                'color' => 'warning',
+                'route' => 'reports.leaves',
+                'export' => 'leaves'
+            ],
+            'overtime' => [
+                'title' => 'Laporan Lembur',
+                'description' => 'Laporan lembur dan overtime karyawan',
+                'icon' => 'fas fa-business-time',
+                'color' => 'secondary',
+                'route' => 'reports.overtime',
+                'export' => 'overtime'
+            ]
+        ];
+
+        // Get summary statistics
+        $summary = [
+            'total_employees' => Employee::where('employment_status', 'active')->count(),
+            'total_departments' => \App\Models\Department::where('is_active', true)->count(),
+            'attendance_rate' => $this->getAttendanceRate($startDate, $endDate),
+            'total_payroll' => \App\Models\Payroll::whereBetween('period_start', [$startDate, $endDate])->sum('net_salary'),
+            'pending_leaves' => Leave::where('status', 'pending')->count(),
+        ];
+
+        return view('reports.ceo', compact('reports', 'summary', 'startDate', 'endDate'));
     }
 
     private function exportAttendance($startDate, $endDate)
@@ -225,5 +290,154 @@ class ReportController extends Controller
         };
         
         return response()->stream($callback, 200, $headers);
+    }
+
+    private function exportLeaves($startDate, $endDate)
+    {
+        $leaves = Leave::with(['user.employee.department', 'leaveType'])
+                       ->whereBetween('start_date', [$startDate, $endDate])
+                       ->get();
+
+        $filename = "leaves_report_{$startDate}_to_{$endDate}.csv";
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function() use ($leaves) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Employee ID', 'Name', 'Department', 'Leave Type', 'Start Date', 'End Date', 'Days', 'Status', 'Reason']);
+
+            foreach ($leaves as $leave) {
+                fputcsv($file, [
+                    $leave->user->employee_id,
+                    $leave->user->full_name,
+                    $leave->user->employee->department->name ?? '',
+                    $leave->leaveType->name ?? '',
+                    $leave->start_date,
+                    $leave->end_date,
+                    $leave->total_days,
+                    $leave->status,
+                    $leave->reason,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    private function exportOvertime($startDate, $endDate)
+    {
+        $overtimes = \App\Models\OvertimeRequest::with(['user.employee.department'])
+                                               ->whereBetween('overtime_date', [$startDate, $endDate])
+                                               ->get();
+
+        $filename = "overtime_report_{$startDate}_to_{$endDate}.csv";
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function() use ($overtimes) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Employee ID', 'Name', 'Department', 'Date', 'Start Time', 'End Time', 'Hours', 'Status', 'Reason']);
+
+            foreach ($overtimes as $overtime) {
+                fputcsv($file, [
+                    $overtime->user->employee_id,
+                    $overtime->user->full_name,
+                    $overtime->user->employee->department->name ?? '',
+                    $overtime->overtime_date,
+                    $overtime->start_time,
+                    $overtime->end_time,
+                    $overtime->total_hours,
+                    $overtime->status,
+                    $overtime->reason,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    private function getAttendanceRate($startDate = null, $endDate = null)
+    {
+        if (!$startDate) $startDate = now()->startOfMonth()->format('Y-m-d');
+        if (!$endDate) $endDate = now()->endOfMonth()->format('Y-m-d');
+
+        $totalDays = Attendance::whereBetween('date', [$startDate, $endDate])->count();
+        $presentDays = Attendance::whereBetween('date', [$startDate, $endDate])
+                                ->whereIn('status', ['present', 'late'])
+                                ->count();
+
+        return $totalDays > 0 ? round(($presentDays / $totalDays) * 100, 1) : 0;
+    }
+
+    public function leaves(Request $request)
+    {
+        $startDate = $request->get('start_date', now()->startOfMonth()->format('Y-m-d'));
+        $endDate = $request->get('end_date', now()->endOfMonth()->format('Y-m-d'));
+        $departmentId = $request->get('department_id');
+
+        $query = Leave::with(['user.employee.department', 'leaveType'])
+                     ->whereBetween('start_date', [$startDate, $endDate]);
+
+        if ($departmentId) {
+            $query->whereHas('user.employee', function($q) use ($departmentId) {
+                $q->where('department_id', $departmentId);
+            });
+        }
+
+        $leaves = $query->paginate(20);
+
+        $stats = [
+            'total_approved' => $query->where('status', 'approved')->count(),
+            'total_pending' => $query->where('status', 'pending')->count(),
+            'total_rejected' => $query->where('status', 'rejected')->count(),
+            'total_days' => $query->where('status', 'approved')->sum('total_days'),
+        ];
+
+        $departments = \App\Models\Department::where('is_active', true)->get();
+
+        return view('reports.leaves', compact(
+            'leaves', 'stats', 'departments', 'startDate', 'endDate', 'departmentId'
+        ));
+    }
+
+    public function overtime(Request $request)
+    {
+        $startDate = $request->get('start_date', now()->startOfMonth()->format('Y-m-d'));
+        $endDate = $request->get('end_date', now()->endOfMonth()->format('Y-m-d'));
+        $departmentId = $request->get('department_id');
+
+        $query = \App\Models\OvertimeRequest::with(['user.employee.department'])
+                                           ->whereBetween('overtime_date', [$startDate, $endDate]);
+
+        if ($departmentId) {
+            $query->whereHas('user.employee', function($q) use ($departmentId) {
+                $q->where('department_id', $departmentId);
+            });
+        }
+
+        $overtimes = $query->paginate(20);
+
+        $stats = [
+            'total_approved' => $query->where('status', 'approved')->count(),
+            'total_pending' => $query->where('status', 'pending')->count(),
+            'total_rejected' => $query->where('status', 'rejected')->count(),
+            'total_hours' => $query->where('status', 'approved')->sum('total_hours'),
+        ];
+
+        $departments = \App\Models\Department::where('is_active', true)->get();
+
+        return view('reports.overtime', compact(
+            'overtimes', 'stats', 'departments', 'startDate', 'endDate', 'departmentId'
+        ));
     }
 }

@@ -180,64 +180,6 @@
                         </div>
                     </div>
 
-                    <!-- Default Schedule Settings -->
-                    <div class="card bg-light mb-3">
-                        <div class="card-header">
-                            <h6 class="mb-0">Pengaturan Jadwal Default</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="default_shift_id" class="form-label">Shift Default <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('default_shift_id') is-invalid @enderror"
-                                            id="default_shift_id" name="default_shift_id" required>
-                                        <option value="">Pilih Shift</option>
-                                        @foreach($shifts as $shift)
-                                            <option value="{{ $shift->id }}"
-                                                {{ old('default_shift_id', $employee->default_shift_id) == $shift->id ? 'selected' : '' }}>
-                                                {{ $shift->name }} ({{ $shift->formatted_start_time }} - {{ $shift->formatted_end_time }})
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('default_shift_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <label for="default_work_type" class="form-label">Tipe Kerja Default <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('default_work_type') is-invalid @enderror"
-                                            id="default_work_type" name="default_work_type" required>
-                                        <option value="">Pilih Tipe Kerja</option>
-                                        <option value="WFO" {{ old('default_work_type', $employee->default_work_type) == 'WFO' ? 'selected' : '' }}>Work From Office (WFO)</option>
-                                        <option value="WFA" {{ old('default_work_type', $employee->default_work_type) == 'WFA' ? 'selected' : '' }}>Work From Anywhere (WFA)</option>
-                                    </select>
-                                    @error('default_work_type')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-
-                                <div class="col-md-4 mb-3">
-                                    <label for="default_office_id" class="form-label">Office Default</label>
-                                    <select class="form-select @error('default_office_id') is-invalid @enderror"
-                                            id="default_office_id" name="default_office_id">
-                                        <option value="">Pilih Office</option>
-                                        @foreach($offices as $office)
-                                            <option value="{{ $office->id }}"
-                                                {{ old('default_office_id', $employee->default_office_id) == $office->id ? 'selected' : '' }}>
-                                                {{ $office->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('default_office_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <small class="text-muted">Wajib diisi untuk tipe kerja WFO</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Bank Information -->
                     <div class="card bg-light mb-3">
                         <div class="card-header">
@@ -247,31 +189,31 @@
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label for="bank_name" class="form-label">Nama Bank</label>
-                                    <input type="text" class="form-control @error('bank_name') is-invalid @enderror"
-                                           id="bank_name" name="bank_name"
-                                           value="{{ old('bank_name', $employee->bank_name) }}"
+                                    <input type="text" class="form-control @error('bank_name') is-invalid @enderror" 
+                                           id="bank_name" name="bank_name" 
+                                           value="{{ old('bank_name', $employee->bank_name) }}" 
                                            placeholder="Contoh: BCA, Mandiri">
                                     @error('bank_name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-
+                                
                                 <div class="col-md-4 mb-3">
                                     <label for="bank_account" class="form-label">Nomor Rekening</label>
-                                    <input type="text" class="form-control @error('bank_account') is-invalid @enderror"
-                                           id="bank_account" name="bank_account"
-                                           value="{{ old('bank_account', $employee->bank_account) }}"
+                                    <input type="text" class="form-control @error('bank_account') is-invalid @enderror" 
+                                           id="bank_account" name="bank_account" 
+                                           value="{{ old('bank_account', $employee->bank_account) }}" 
                                            placeholder="1234567890">
                                     @error('bank_account')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-
+                                
                                 <div class="col-md-4 mb-3">
                                     <label for="bank_account_name" class="form-label">Nama Pemilik Rekening</label>
-                                    <input type="text" class="form-control @error('bank_account_name') is-invalid @enderror"
-                                           id="bank_account_name" name="bank_account_name"
-                                           value="{{ old('bank_account_name', $employee->bank_account_name) }}"
+                                    <input type="text" class="form-control @error('bank_account_name') is-invalid @enderror" 
+                                           id="bank_account_name" name="bank_account_name" 
+                                           value="{{ old('bank_account_name', $employee->bank_account_name) }}" 
                                            placeholder="Nama sesuai rekening">
                                     @error('bank_account_name')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -365,26 +307,6 @@ $(document).ready(function() {
         $(this).val(value);
     });
 
-    // Handle work type change for office requirement
-    $('#default_work_type').change(function() {
-        const workType = $(this).val();
-        const officeSelect = $('#default_office_id');
-
-        if (workType === 'WFO') {
-            officeSelect.prop('required', true);
-            officeSelect.closest('.mb-3').find('label').html('Office Default <span class="text-danger">*</span>');
-        } else {
-            officeSelect.prop('required', false);
-            officeSelect.closest('.mb-3').find('label').html('Office Default');
-            officeSelect.val(''); // Clear selection for WFA
-        }
-    });
-
-    // Trigger work type change on page load if value exists
-    if ($('#default_work_type').val()) {
-        $('#default_work_type').trigger('change');
-    }
-
     // Form validation
     $('form').on('submit', function(e) {
         const departmentId = $('#department_id').val();
@@ -393,19 +315,10 @@ $(document).ready(function() {
         const employmentType = $('#employment_type').val();
         const employmentStatus = $('#employment_status').val();
         const basicSalary = $('#basic_salary').val();
-        const defaultShiftId = $('#default_shift_id').val();
-        const defaultWorkType = $('#default_work_type').val();
-
-        if (!departmentId || !positionId || !hireDate || !employmentType || !employmentStatus || !basicSalary || !defaultShiftId || !defaultWorkType) {
+        
+        if (!departmentId || !positionId || !hireDate || !employmentType || !employmentStatus || !basicSalary) {
             e.preventDefault();
             alert('Mohon lengkapi semua field yang wajib diisi!');
-            return false;
-        }
-
-        // Check office requirement for WFO
-        if (defaultWorkType === 'WFO' && !$('#default_office_id').val()) {
-            e.preventDefault();
-            alert('Office wajib diisi untuk tipe kerja WFO!');
             return false;
         }
     });

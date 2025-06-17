@@ -87,7 +87,7 @@
     <div class="card-body">
         <div class="row">
             <div class="col-md-3 mb-2">
-                <a href="/periods" class="btn btn-primary w-100">
+                <a href="{{ route('payroll.periods.index') }}" class="btn btn-primary w-100">
                     <i class="fas fa-calendar-alt me-2"></i>Kelola Periode
                 </a>
             </div>
@@ -304,7 +304,7 @@
                 <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
                 <h5>Tidak ada data payroll</h5>
                 <p class="text-muted">Belum ada data penggajian untuk periode yang dipilih.</p>
-                <a href="/periods/create" class="btn btn-primary">
+                <a href="{{ route('payroll.periods.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>Buat Periode Payroll
                 </a>
             </div>
@@ -332,7 +332,7 @@
 <script>
 function generatePayroll() {
     // Redirect to periods page to create a new period first
-    window.location.href = '/periods';
+    window.location.href = '{{ route("payroll.periods.index") }}';
 }
 
 function approveAll() {

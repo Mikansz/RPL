@@ -74,17 +74,13 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // Get or create schedule for today
+        // Check if user has active schedule for today
         $todaySchedule = $user->getTodaySchedule();
         if (!$todaySchedule) {
-            // Auto-create schedule using employee's default settings
-            $todaySchedule = $user->getOrCreateTodaySchedule();
-            if (!$todaySchedule) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak dapat membuat jadwal kerja. Pastikan Anda memiliki shift dan office default. Silakan hubungi HR.'
-                ]);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki jadwal kerja untuk hari ini. Silakan hubungi HR untuk mengatur jadwal.'
+            ]);
         }
 
         // Enhanced location validation with geofencing
@@ -222,17 +218,13 @@ class AttendanceController extends Controller
             ]);
         }
 
-        // Get or create today's schedule to use shift timing
+        // Get today's schedule to use shift timing
         $todaySchedule = $user->getTodaySchedule();
         if (!$todaySchedule) {
-            // Auto-create schedule using employee's default settings
-            $todaySchedule = $user->getOrCreateTodaySchedule();
-            if (!$todaySchedule) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak dapat membuat jadwal kerja. Pastikan Anda memiliki shift dan office default. Silakan hubungi HR.'
-                ]);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Jadwal kerja tidak ditemukan.'
+            ]);
         }
 
         // Validate location for WFO clock out

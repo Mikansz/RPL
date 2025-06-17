@@ -55,13 +55,6 @@ class ScheduleController extends Controller
 
     public function create()
     {
-        $user = Auth::user();
-
-        // Prevent karyawan from accessing create page
-        if ($user->hasRole('karyawan')) {
-            abort(403, 'Anda tidak memiliki akses untuk membuat jadwal.');
-        }
-
         $users = User::whereHas('employee')->get();
         $offices = Office::active()->get();
         $shifts = Shift::active()->get();
@@ -121,13 +114,6 @@ class ScheduleController extends Controller
 
     public function edit($id)
     {
-        $user = Auth::user();
-
-        // Prevent karyawan from accessing edit page
-        if ($user->hasRole('karyawan')) {
-            abort(403, 'Anda tidak memiliki akses untuk mengedit jadwal.');
-        }
-
         $schedule = Schedule::findOrFail($id);
         $users = User::whereHas('employee')->get();
         $offices = Office::active()->get();
@@ -141,9 +127,9 @@ class ScheduleController extends Controller
         $schedule = Schedule::findOrFail($id);
         $user = Auth::user();
 
-        // Prevent karyawan from updating schedules
-        if ($user->hasRole('karyawan')) {
-            abort(403, 'Anda tidak memiliki akses untuk mengedit jadwal.');
+        // Check permission based on user role
+        if ($user->hasRole('karyawan') && $schedule->user_id !== $user->id) {
+            abort(403, 'Anda tidak dapat mengedit jadwal orang lain.');
         }
 
         if ($user->hasRole('manager')) {
@@ -332,129 +318,5 @@ class ScheduleController extends Controller
         $schedules = $query->get();
 
         return view('schedules.calendar', compact('schedules', 'month', 'year'));
-    }
-
-    public function bulkCreate()
-    {
-        $user = Auth::user();
-
-        // Prevent karyawan from accessing bulk create page
-        if ($user->hasRole('karyawan')) {
-            abort(403, 'Anda tidak memiliki akses untuk membuat jadwal.');
-        }
-
-        $users = User::whereHas('employee')->get();
-        $offices = Office::active()->get();
-        $shifts = Shift::active()->get();
-
-        return view('schedules.bulk-create', compact('users', 'offices', 'shifts'));
-    }
-
-    public function bulkStore(Request $request)
-    {
-        $user = Auth::user();
-
-        // Prevent karyawan from creating schedules
-        if ($user->hasRole('karyawan')) {
-            abort(403, 'Anda tidak memiliki akses untuk membuat jadwal.');
-        }
-
-        $request->validate([
-            'user_ids' => 'required|array|min:1',
-            'user_ids.*' => 'exists:users,id',
-            'shift_id' => 'required|exists:shifts,id',
-            'office_id' => 'nullable|exists:offices,id',
-            'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'work_type' => 'required|in:WFO,WFA',
-            'notes' => 'nullable|string|max:500',
-            'skip_weekends' => 'boolean',
-            'skip_existing' => 'boolean',
-        ]);
-
-        // Validate date range (max 30 days)
-        $startDate = Carbon::parse($request->start_date);
-        $endDate = Carbon::parse($request->end_date);
-        $daysDiff = $startDate->diffInDays($endDate) + 1;
-
-        if ($daysDiff > 30) {
-            return back()->withErrors(['end_date' => 'Periode jadwal maksimal 30 hari.']);
-        }
-
-        // Validate office_id for WFO
-        if ($request->work_type === 'WFO' && !$request->office_id) {
-            return back()->withErrors(['office_id' => 'Kantor wajib dipilih untuk jadwal WFO.']);
-        }
-
-        $createdCount = 0;
-        $skippedCount = 0;
-        $errors = [];
-
-        foreach ($request->user_ids as $userId) {
-            $currentDate = $startDate->copy();
-
-            while ($currentDate->lte($endDate)) {
-                // Skip weekends if requested
-                if ($request->skip_weekends && $currentDate->isWeekend()) {
-                    $currentDate->addDay();
-                    continue;
-                }
-
-                // Check if schedule already exists
-                $existingSchedule = Schedule::where('user_id', $userId)
-                                          ->where('schedule_date', $currentDate->format('Y-m-d'))
-                                          ->first();
-
-                if ($existingSchedule) {
-                    if ($request->skip_existing) {
-                        $skippedCount++;
-                        $currentDate->addDay();
-                        continue;
-                    } else {
-                        $user = User::find($userId);
-                        $errors[] = "Jadwal sudah ada untuk {$user->full_name} pada {$currentDate->format('d/m/Y')}";
-                        $currentDate->addDay();
-                        continue;
-                    }
-                }
-
-                // Create schedule
-                try {
-                    Schedule::create([
-                        'user_id' => $userId,
-                        'shift_id' => $request->shift_id,
-                        'office_id' => $request->work_type === 'WFO' ? $request->office_id : null,
-                        'schedule_date' => $currentDate->format('Y-m-d'),
-                        'work_type' => $request->work_type,
-                        'status' => 'approved',
-                        'notes' => $request->notes,
-                        'created_by' => Auth::id(),
-                        'approved_by' => Auth::id(),
-                        'approved_at' => now(),
-                    ]);
-
-                    $createdCount++;
-                } catch (\Exception $e) {
-                    $user = User::find($userId);
-                    $errors[] = "Gagal membuat jadwal untuk {$user->full_name} pada {$currentDate->format('d/m/Y')}: {$e->getMessage()}";
-                }
-
-                $currentDate->addDay();
-            }
-        }
-
-        $message = "Berhasil membuat {$createdCount} jadwal.";
-        if ($skippedCount > 0) {
-            $message .= " {$skippedCount} jadwal dilewati karena sudah ada.";
-        }
-
-        if (!empty($errors)) {
-            $message .= " Beberapa jadwal gagal dibuat: " . implode(', ', array_slice($errors, 0, 3));
-            if (count($errors) > 3) {
-                $message .= " dan " . (count($errors) - 3) . " error lainnya.";
-            }
-        }
-
-        return redirect()->route('schedules.index')->with('success', $message);
     }
 }

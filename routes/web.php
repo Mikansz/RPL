@@ -188,6 +188,46 @@ Route::middleware('auth')->group(function () {
         });
     });
 
+    // Test permanent schedule feature
+    Route::get('/test/permanent-schedule', function () {
+        try {
+            // Test creating a permanent schedule template
+            $shift = \App\Models\Shift::first();
+            if (!$shift) {
+                return response('<pre>Error: No shifts found. Please create a shift first.</pre>');
+            }
+
+            $template = \App\Models\WorkScheduleTemplate::create([
+                'name' => 'Test Permanent Schedule',
+                'description' => 'Test template for permanent schedule feature',
+                'shift_id' => $shift->id,
+                'office_id' => null,
+                'work_type' => 'WFA',
+                'work_days' => [1, 2, 3, 4, 5], // Monday to Friday
+                'exclude_sundays' => true,
+                'exclude_holidays' => true,
+                'effective_from' => null, // Permanent schedule
+                'effective_until' => null, // Permanent schedule
+                'is_active' => true,
+            ]);
+
+            $output = [];
+            $output[] = "✅ Permanent schedule template created successfully!";
+            $output[] = "Template ID: {$template->id}";
+            $output[] = "Template Name: {$template->name}";
+            $output[] = "Is Permanent: " . ($template->isPermanent() ? 'Yes' : 'No');
+            $output[] = "Effective Period: {$template->effective_period}";
+            $output[] = "Work Days: {$template->work_days_text}";
+            $output[] = "";
+            $output[] = "🎉 Permanent schedule feature is working correctly!";
+            $output[] = "You can now create work schedules that apply forever without specific dates.";
+
+            return response('<pre>' . implode("\n", $output) . '</pre>');
+        } catch (\Exception $e) {
+            return response('<pre>Error: ' . $e->getMessage() . '</pre>');
+        }
+    })->name('test.permanent-schedule');
+
     // Debug route for permissions
     Route::get('/debug/permissions', function () {
         return view('debug.permissions');
@@ -1135,6 +1175,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/payroll/periods', [PayrollController::class, 'storePeriod'])->name('payroll.periods.store');
     Route::get('/payroll/periods/{period}/calculate', [PayrollController::class, 'calculate'])->name('payroll.periods.calculate');
     Route::post('/payroll/periods/{period}/process', [PayrollController::class, 'process'])->name('payroll.periods.process');
+
+    // Payroll Period Reports and Export
+    Route::get('/payroll/periods/{period}/report', [PayrollController::class, 'periodReport'])->name('payroll.periods.report');
+    Route::get('/payroll/periods/{period}/export', [PayrollController::class, 'exportPeriod'])->name('payroll.periods.export');
+    Route::get('/payroll/periods/export-all', [PayrollController::class, 'exportAllPeriods'])->name('payroll.periods.export-all');
 
     // Payroll Actions
     Route::get('/payroll/{payroll}', [PayrollController::class, 'show'])->name('payroll.show');

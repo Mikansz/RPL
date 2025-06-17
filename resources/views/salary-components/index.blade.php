@@ -167,11 +167,25 @@
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             @endcan
-                                            @can('salary_components.edit')
+                                            {{-- Show edit button with proper permission check --}}
+                                            @if(auth()->user() && (auth()->user()->hasPermission('salary_components.edit') || auth()->user()->hasRole('Admin') || auth()->user()->hasRole('HRD') || auth()->user()->hasRole('CFO')))
                                             <a href="{{ route('salary-components.edit', $component) }}" class="btn btn-outline-primary" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            @endcan
+                                            @else
+                                            {{-- Show debug info if no permission --}}
+                                            <span class="btn btn-outline-secondary disabled" title="Tidak ada permission edit">
+                                                <i class="fas fa-edit"></i>
+                                            </span>
+                                            @endif
+
+                                            @if(auth()->user() && (auth()->user()->hasPermission('salary_components.edit') || auth()->user()->hasRole('Admin') || auth()->user()->hasRole('HRD') || auth()->user()->hasRole('CFO')))
+                                            <button type="button" class="btn btn-outline-{{ $component->is_active ? 'warning' : 'success' }}"
+                                                    onclick="toggleStatus({{ $component->id }}, {{ $component->is_active ? 'false' : 'true' }})"
+                                                    title="{{ $component->is_active ? 'Nonaktifkan' : 'Aktifkan' }}">
+                                                <i class="fas fa-{{ $component->is_active ? 'pause' : 'play' }}"></i>
+                                            </button>
+                                            @endif
                                             @can('salary_components.delete')
                                             <button type="button" class="btn btn-outline-danger" onclick="deleteComponent({{ $component->id }})" title="Hapus">
                                                 <i class="fas fa-trash"></i>
@@ -231,6 +245,28 @@ function deleteComponent(componentId) {
             value: 'DELETE'
         }));
         
+        // Submit form
+        $('body').append(form);
+        form.submit();
+    }
+}
+
+function toggleStatus(componentId, newStatus) {
+    const action = newStatus ? 'mengaktifkan' : 'menonaktifkan';
+    if (confirm(`Apakah Anda yakin ingin ${action} komponen gaji ini?`)) {
+        // Create form and submit
+        const form = $('<form>', {
+            method: 'POST',
+            action: `/salary-components/${componentId}/toggle-status`
+        });
+
+        // Add CSRF token
+        form.append($('<input>', {
+            type: 'hidden',
+            name: '_token',
+            value: '{{ csrf_token() }}'
+        }));
+
         // Submit form
         $('body').append(form);
         form.submit();

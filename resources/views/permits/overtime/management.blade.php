@@ -1,252 +1,385 @@
 @extends('layouts.app')
 
-@section('title', 'Manajemen Lembur - HRD')
+@section('title', 'Manajemen Lembur')
 
 @section('content')
-<!-- Statistics Cards -->
-<div class="row mb-4">
-    <div class="col-md-2">
-        <div class="card stat-card-warning">
-            <div class="card-body text-center">
-                <i class="fas fa-hourglass-half fa-2x mb-3"></i>
-                <h3 class="mb-1">{{ $stats['total_pending'] }}</h3>
-                <p class="mb-0">Pending</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card stat-card-success">
-            <div class="card-body text-center">
-                <i class="fas fa-check-circle fa-2x mb-3"></i>
-                <h3 class="mb-1">{{ $stats['total_approved'] }}</h3>
-                <p class="mb-0">Disetujui</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card stat-card-info">
-            <div class="card-body text-center">
-                <i class="fas fa-calendar-alt fa-2x mb-3"></i>
-                <h3 class="mb-1">{{ $stats['total_this_month'] }}</h3>
-                <p class="mb-0">Bulan Ini</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stat-card-primary">
-            <div class="card-body text-center">
-                <i class="fas fa-clock fa-2x mb-3"></i>
-                <h3 class="mb-1">{{ number_format($stats['total_hours_this_month'], 1) }}</h3>
-                <p class="mb-0">Jam Bulan Ini</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card stat-card-dark">
-            <div class="card-body text-center">
-                <i class="fas fa-money-bill-wave fa-2x mb-3"></i>
-                <h3 class="mb-1">Rp {{ number_format($stats['total_amount_this_month'], 0, ',', '.') }}</h3>
-                <p class="mb-0">Nominal Bulan Ini</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Filters -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter</h5>
-            </div>
-            <div class="card-body">
-                <form method="GET" action="{{ route('permits.overtime.management') }}">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select name="status" id="status" class="form-select">
-                                <option value="">Semua Status</option>
-                                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                                <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Disetujui</option>
-                                <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Ditolak</option>
-                                <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Selesai</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="start_date" class="form-label">Tanggal Mulai</label>
-                            <input type="date" name="start_date" id="start_date" class="form-control" value="{{ request('start_date') }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="end_date" class="form-label">Tanggal Akhir</label>
-                            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ request('end_date') }}">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">&nbsp;</label>
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-search me-2"></i>Filter
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Overtime Requests Table -->
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-list"></i> Semua Pengajuan Lembur
-                </h5>
-                <div>
-                    <button type="button" class="btn btn-success btn-sm" onclick="bulkApprove()">
-                        <i class="fas fa-check-double me-2"></i>Setujui Terpilih
-                    </button>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                <h4 class="mb-sm-0">Manajemen Lembur</h4>
+                <div class="page-title-right">
+                    <ol class="breadcrumb m-0">
+                        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('permits.index') }}">Permits</a></li>
+                        <li class="breadcrumb-item active">Manajemen Lembur</li>
+                    </ol>
                 </div>
             </div>
-            <div class="card-body">
-                @if($overtimes->count() > 0)
-                    <form id="bulkForm" method="POST" action="{{ route('permits.overtime.bulk-approve') }}">
-                        @csrf
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th width="40">
-                                            <input type="checkbox" id="selectAll" class="form-check-input">
-                                        </th>
-                                        <th>Karyawan</th>
-                                        <th>Tanggal Lembur</th>
-                                        <th>Waktu</th>
-                                        <th>Durasi</th>
-                                        <th>Pekerjaan</th>
-                                        <th>Status</th>
-                                        <th>Nominal</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($overtimes as $overtime)
-                                    <tr>
-                                        <td>
-                                            @if($overtime->status === 'pending')
-                                            <input type="checkbox" name="overtime_ids[]" value="{{ $overtime->id }}" class="form-check-input overtime-checkbox">
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div>
-                                                    <strong>{{ $overtime->user->employee->full_name ?? $overtime->user->first_name . ' ' . $overtime->user->last_name }}</strong><br>
-                                                    <small class="text-muted">{{ $overtime->user->employee->employee_id ?? $overtime->user->username }}</small>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <strong>{{ $overtime->overtime_date->format('d M Y') }}</strong><br>
-                                            <small class="text-muted">{{ $overtime->created_at->format('d M Y H:i') }}</small>
-                                        </td>
-                                        <td>
-                                            {{ $overtime->start_time }} - {{ $overtime->end_time }}
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info">{{ number_format($overtime->planned_hours, 1) }} jam</span>
-                                            @if($overtime->actual_hours)
-                                                <br><small class="text-muted">Aktual: {{ number_format($overtime->actual_hours, 1) }} jam</small>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <div style="max-width: 200px;">
-                                                {{ Str::limit($overtime->work_description, 50) }}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            @if($overtime->status === 'pending')
-                                                <span class="badge bg-warning">Pending</span>
-                                            @elseif($overtime->status === 'approved')
-                                                <span class="badge bg-success">Disetujui</span>
-                                            @elseif($overtime->status === 'rejected')
-                                                <span class="badge bg-danger">Ditolak</span>
-                                            @else
-                                                <span class="badge bg-secondary">{{ ucfirst($overtime->status) }}</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if($overtime->overtime_amount)
-                                                <strong>Rp {{ number_format($overtime->overtime_amount, 0, ',', '.') }}</strong>
-                                            @else
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <a href="{{ route('permits.overtime.show', $overtime) }}" class="btn btn-sm btn-outline-info" title="Lihat Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a href="{{ route('permits.overtime.edit', $overtime) }}" class="btn btn-sm btn-outline-primary" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                @if($overtime->status === 'approved')
-                                                <a href="{{ route('permits.overtime.slip', $overtime) }}" class="btn btn-sm btn-outline-warning" title="Cetak Slip" target="_blank">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                                @endif
-                                                @if($overtime->status === 'pending')
-                                                <form method="POST" action="{{ route('permits.overtime.destroy', $overtime) }}" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus pengajuan lembur ini?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </form>
+        </div>
+    </div>
 
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-center">
-                        {{ $overtimes->appends(request()->query())->links() }}
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <div class="flex-1">
+                            <p class="text-truncate font-size-14 mb-2">Total Pengajuan</p>
+                            <h4 class="mb-2">{{ $stats['total'] }}</h4>
+                        </div>
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-light text-primary rounded-3">
+                                <i class="fas fa-clock font-size-24"></i>
+                            </span>
+                        </div>
                     </div>
-                @else
-                    <div class="text-center py-4">
-                        <i class="fas fa-clock fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">Tidak ada pengajuan lembur</h5>
-                        <p class="text-muted">Belum ada pengajuan lembur yang sesuai dengan filter yang dipilih.</p>
-                    </div>
-                @endif
+                </div>
             </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <div class="flex-1">
+                            <p class="text-truncate font-size-14 mb-2">Menunggu Persetujuan</p>
+                            <h4 class="mb-2 text-warning">{{ $stats['pending'] }}</h4>
+                        </div>
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-light text-warning rounded-3">
+                                <i class="fas fa-hourglass-half font-size-24"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <div class="flex-1">
+                            <p class="text-truncate font-size-14 mb-2">Disetujui</p>
+                            <h4 class="mb-2 text-success">{{ $stats['approved'] }}</h4>
+                        </div>
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-light text-success rounded-3">
+                                <i class="fas fa-check-circle font-size-24"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <div class="flex-1">
+                            <p class="text-truncate font-size-14 mb-2">Ditolak</p>
+                            <h4 class="mb-2 text-danger">{{ $stats['rejected'] }}</h4>
+                        </div>
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-light text-danger rounded-3">
+                                <i class="fas fa-times-circle font-size-24"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Stats -->
+    <div class="row mb-4">
+        <div class="col-xl-6 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <div class="flex-1">
+                            <p class="text-truncate font-size-14 mb-2">Total Jam Lembur (Disetujui)</p>
+                            <h4 class="mb-2 text-info">{{ number_format($stats['total_hours'] ?? 0, 1) }} Jam</h4>
+                        </div>
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-light text-info rounded-3">
+                                <i class="fas fa-stopwatch font-size-24"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6 col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <div class="flex-1">
+                            <p class="text-truncate font-size-14 mb-2">Total Nilai Lembur</p>
+                            <h4 class="mb-2 text-success">Rp {{ number_format($stats['total_amount'] ?? 0, 0, ',', '.') }}</h4>
+                        </div>
+                        <div class="avatar-sm">
+                            <span class="avatar-title bg-light text-success rounded-3">
+                                <i class="fas fa-money-bill-wave font-size-24"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ route('permits.overtime.pending') }}" class="btn btn-warning w-100">
+                                <i class="fas fa-hourglass-half me-2"></i>Pending Approval
+                                @if($stats['pending'] > 0)
+                                    <span class="badge bg-light text-dark ms-2">{{ $stats['pending'] }}</span>
+                                @endif
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ route('permits.overtime.reports') }}" class="btn btn-info w-100">
+                                <i class="fas fa-chart-bar me-2"></i>Reports
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button type="button" class="btn btn-secondary w-100" onclick="exportData()">
+                                <i class="fas fa-download me-2"></i>Export Data
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button type="button" class="btn btn-primary w-100" onclick="refreshData()">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overtime Requests Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="card-title mb-0">Semua Pengajuan Lembur</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="statusFilter" onchange="filterByStatus()">
+                            <option value="">Semua Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Disetujui</option>
+                            <option value="rejected">Ditolak</option>
+                        </select>
+                        <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Cari karyawan..." onkeyup="searchTable()">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="overtimeTable">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Karyawan</th>
+                            <th>Tanggal</th>
+                            <th>Jam</th>
+                            <th>Durasi</th>
+                            <th>Deskripsi</th>
+                            <th>Status</th>
+                            <th>Disetujui Oleh</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($overtimes as $index => $overtime)
+                        <tr>
+                            <td>{{ $overtimes->firstItem() + $index }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-xs me-3">
+                                        <span class="avatar-title rounded-circle bg-soft-primary text-primary">
+                                            {{ substr($overtime->user->name, 0, 1) }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ $overtime->user->name }}</h6>
+                                        <small class="text-muted">{{ $overtime->user->employee->employee_id ?? 'N/A' }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ $overtime->overtime_date->format('d/m/Y') }}</td>
+                            <td>{{ $overtime->start_time->format('H:i') }} - {{ $overtime->end_time->format('H:i') }}</td>
+                            <td>{{ $overtime->planned_hours }} jam</td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ $overtime->work_description }}">
+                                    {{ $overtime->work_description }}
+                                </span>
+                            </td>
+                            <td>
+                                @if($overtime->status === 'pending')
+                                    <span class="badge bg-warning">Pending</span>
+                                @elseif($overtime->status === 'approved')
+                                    <span class="badge bg-success">Disetujui</span>
+                                @elseif($overtime->status === 'rejected')
+                                    <span class="badge bg-danger">Ditolak</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($overtime->approvedBy)
+                                    <small>{{ $overtime->approvedBy->name }}</small><br>
+                                    <small class="text-muted">{{ $overtime->approved_at->format('d/m/Y H:i') }}</small>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        Aksi
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{{ route('permits.overtime.show', $overtime) }}">
+                                            <i class="fas fa-eye me-2"></i>Detail
+                                        </a></li>
+                                        @if($overtime->status === 'pending')
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-success" href="#" onclick="approveOvertime({{ $overtime->id }})">
+                                            <i class="fas fa-check me-2"></i>Setujui
+                                        </a></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="rejectOvertime({{ $overtime->id }})">
+                                            <i class="fas fa-times me-2"></i>Tolak
+                                        </a></li>
+                                        @endif
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                                    <p>Belum ada pengajuan lembur</p>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if($overtimes->hasPages())
+            <div class="d-flex justify-content-center mt-4">
+                {{ $overtimes->links() }}
+            </div>
+            @endif
         </div>
     </div>
 </div>
 
 <script>
-document.getElementById('selectAll').addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.overtime-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
-    });
-});
+function filterByStatus() {
+    const filter = document.getElementById('statusFilter').value;
+    const table = document.getElementById('overtimeTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
 
-function bulkApprove() {
-    const checkedBoxes = document.querySelectorAll('.overtime-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-        alert('Pilih minimal satu pengajuan lembur untuk disetujui.');
-        return;
+    for (let i = 0; i < rows.length; i++) {
+        const statusCell = rows[i].getElementsByTagName('td')[6];
+        if (statusCell) {
+            const statusText = statusCell.textContent.toLowerCase();
+            if (filter === '' || statusText.includes(filter)) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
     }
-    
-    if (confirm(`Yakin ingin menyetujui ${checkedBoxes.length} pengajuan lembur?`)) {
-        document.getElementById('bulkForm').submit();
+}
+
+function searchTable() {
+    const input = document.getElementById('searchInput');
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById('overtimeTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+        const nameCell = rows[i].getElementsByTagName('td')[1];
+        if (nameCell) {
+            const nameText = nameCell.textContent.toLowerCase();
+            if (nameText.includes(filter)) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
     }
+}
+
+function approveOvertime(id) {
+    if (confirm('Apakah Anda yakin ingin menyetujui pengajuan lembur ini?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/permits/overtime/${id}/approve`;
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrfToken);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function rejectOvertime(id) {
+    const reason = prompt('Masukkan alasan penolakan:');
+    if (reason && reason.trim() !== '') {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/permits/overtime/${id}/reject`;
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        
+        const reasonInput = document.createElement('input');
+        reasonInput.type = 'hidden';
+        reasonInput.name = 'rejection_reason';
+        reasonInput.value = reason;
+        
+        form.appendChild(csrfToken);
+        form.appendChild(reasonInput);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function exportData() {
+    alert('Fitur export akan segera tersedia');
+}
+
+function refreshData() {
+    window.location.reload();
 }
 </script>
 @endsection

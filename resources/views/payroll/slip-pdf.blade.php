@@ -73,25 +73,13 @@
             font-weight: bold;
             font-size: 14px;
         }
-        .footer {
+        .footer-info {
             margin-top: 40px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .signature {
             text-align: center;
-            width: 200px;
-        }
-        .signature-line {
-            border-top: 1px solid #333;
-            margin-top: 60px;
-            padding-top: 5px;
-        }
-        .print-date {
-            text-align: right;
-            font-size: 10px;
-            color: #666;
-            margin-top: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -230,28 +218,24 @@
     </div>
     @endif
 
-    <div class="footer">
-        <div class="signature">
-            <div>Karyawan</div>
-            <div class="signature-line">{{ $payroll->user->name }}</div>
+    <div class="footer-info">
+        <div style="font-weight: bold; margin-bottom: 10px;">
+            SLIP GAJI ELEKTRONIK
         </div>
-        <div class="signature">
-            <div>HRD</div>
-            <div class="signature-line">
-                @if($payroll->approved_by)
-                    {{ $payroll->approvedBy->name }}
-                @else
-                    ___________________
-                @endif
-            </div>
+        <div style="margin-bottom: 5px;">
+            Dokumen ini digenerate secara otomatis pada {{ now()->format('d F Y H:i:s') }}
         </div>
-    </div>
-
-    <div class="print-date">
-        Dicetak pada: {{ now()->format('d/m/Y H:i:s') }}
         @if($payroll->approved_at)
-        | Disetujui pada: {{ $payroll->approved_at->format('d/m/Y H:i:s') }}
+        <div style="margin-bottom: 5px;">
+            Disetujui pada: {{ $payroll->approved_at->format('d F Y H:i:s') }}
+            @if($payroll->approved_by)
+                oleh {{ $payroll->approvedBy->name }}
+            @endif
+        </div>
         @endif
+        <div style="font-style: italic; color: #666; font-size: 10px;">
+            Dokumen ini sah tanpa memerlukan tanda tangan basah
+        </div>
     </div>
 
     <script>

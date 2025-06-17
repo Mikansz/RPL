@@ -15,8 +15,8 @@ class OvertimeRequestPolicy
      */
     public function viewAny(User $user)
     {
-        return $user->hasPermission('overtime.view') ||
-               $user->hasAnyRole(['Admin', 'HRD', 'HR', 'Manager']);
+        return $user->hasPermission('overtime.view') || 
+               $user->hasAnyRole(['Admin', 'HR', 'Manager']);
     }
 
     /**
@@ -30,8 +30,8 @@ class OvertimeRequestPolicy
         }
 
         // Or if they have permission to view all overtime requests
-        return $user->hasPermission('overtime.view') ||
-               $user->hasAnyRole(['Admin', 'HRD', 'HR', 'Manager']);
+        return $user->hasPermission('overtime.view') || 
+               $user->hasAnyRole(['Admin', 'HR', 'Manager']);
     }
 
     /**
@@ -39,8 +39,8 @@ class OvertimeRequestPolicy
      */
     public function create(User $user)
     {
-        return $user->hasPermission('overtime.create') ||
-               $user->hasAnyRole(['Admin', 'HRD', 'HR', 'Manager', 'Employee']);
+        return $user->hasPermission('overtime.create') || 
+               $user->hasAnyRole(['Admin', 'HR', 'Manager', 'Employee']);
     }
 
     /**
@@ -54,8 +54,8 @@ class OvertimeRequestPolicy
         }
 
         // Or if they have admin permissions
-        return $user->hasPermission('overtime.edit') ||
-               $user->hasAnyRole(['Admin', 'HRD', 'HR', 'Manager']);
+        return $user->hasPermission('overtime.edit') && 
+               $user->hasAnyRole(['Admin', 'HR', 'Manager']);
     }
 
     /**
@@ -69,8 +69,8 @@ class OvertimeRequestPolicy
         }
 
         // Or if they have admin permissions
-        return $user->hasPermission('overtime.delete') ||
-               $user->hasAnyRole(['Admin', 'HRD', 'HR', 'Manager']);
+        return $user->hasPermission('overtime.delete') && 
+               $user->hasAnyRole(['Admin', 'HR', 'Manager']);
     }
 
     /**
