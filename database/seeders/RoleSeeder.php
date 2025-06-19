@@ -19,7 +19,7 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'ceo',
                 'display_name' => 'Chief Executive Officer',
-                'description' => 'Akses penuh ke semua modul sistem',
+                'description' => 'Akses ke semua laporan dan dashboard monitoring',
                 'is_active' => true,
             ],
             [
@@ -49,7 +49,10 @@ class RoleSeeder extends Seeder
         ];
 
         foreach ($roles as $role) {
-            Role::create($role);
+            Role::updateOrCreate(
+                ['name' => $role['name']], 
+                $role
+            );
         }
     }
 }
