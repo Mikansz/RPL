@@ -314,6 +314,48 @@
                         <i class="fas fa-tachometer-alt me-2"></i>Dashboard
                     </a>
                 </li>
+
+                <!-- Menu Laporan untuk CEO -->
+                @if(auth()->check() && (auth()->user()->hasPermission('reports.view') || auth()->user()->hasRole('ceo')))
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle {{ request()->routeIs('reports*', 'payroll.reports*', 'attendance.report*') ? 'active' : '' }}"
+                       href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-chart-bar me-2"></i>Laporan
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
+                        @if(auth()->user()->hasPermission('reports.attendance'))
+                        <li><a class="dropdown-item {{ request()->routeIs('attendance.report') ? 'active' : '' }}" href="{{ route('attendance.report') }}">
+                            <i class="fas fa-clock me-2"></i>Laporan Absensi
+                        </a></li>
+                        @endif
+                        
+                        @if(auth()->user()->hasPermission('reports.payroll'))
+                        <li><a class="dropdown-item {{ request()->routeIs('payroll.reports') ? 'active' : '' }}" href="{{ route('payroll.reports') }}">
+                            <i class="fas fa-money-bill-wave me-2"></i>Laporan Penggajian
+                        </a></li>
+                        @endif
+                        
+                        @if(auth()->user()->hasPermission('reports.employee'))
+                        <li><a class="dropdown-item {{ request()->routeIs('reports.hr') ? 'active' : '' }}" href="{{ route('reports.hr') }}">
+                            <i class="fas fa-users me-2"></i>Laporan Karyawan
+                        </a></li>
+                        @endif
+                        
+                        @if(auth()->user()->hasPermission('reports.financial'))
+                        <li><a class="dropdown-item {{ request()->routeIs('reports.financial') ? 'active' : '' }}" href="{{ route('reports.financial') }}">
+                            <i class="fas fa-dollar-sign me-2"></i>Laporan Keuangan
+                        </a></li>
+                        @endif
+                        
+                        <li><hr class="dropdown-divider"></li>
+                        @if(auth()->user()->hasPermission('reports.export'))
+                        <li><a class="dropdown-item" href="#" onclick="showExportModal()">
+                            <i class="fas fa-download me-2"></i>Export Laporan
+                        </a></li>
+                        @endif
+                    </ul>
+                </li>
+                @endif
                 
                 @auth
                     @if(auth()->user()->hasPermission('users.view'))
