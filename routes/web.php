@@ -472,6 +472,152 @@ Route::middleware('auth')->group(function () {
     // Direct test for overtime pending
     Route::get('/permits/overtime/pending-test', [App\Http\Controllers\PermitController::class, 'overtimePending']);
 
+    // Test current user permissions for schedule creation
+    Route::get('/test/user-schedule-permissions', function() {
+        $user = auth()->user();
+        $output = [];
+
+        $output[] = "=== USER SCHEDULE PERMISSIONS TEST ===";
+        $output[] = "Current User: " . $user->full_name;
+        $output[] = "User ID: " . $user->id;
+        $output[] = "Employee ID: " . ($user->employee_id ?? 'N/A');
+        $output[] = "";
+
+        // Check roles
+        $output[] = "ROLES:";
+        $roles = $user->roles()->get();
+        if ($roles->count() > 0) {
+            foreach ($roles as $role) {
+                $output[] = "- {$role->name} ({$role->display_name})";
+            }
+        } else {
+            $output[] = "- No roles assigned";
+        }
+        $output[] = "";
+
+        // Check specific permissions
+        $permissions = [
+            'schedules.view',
+            'schedules.create',
+            'schedules.edit',
+            'schedules.delete',
+            'schedules.approve'
+        ];
+
+        $output[] = "SCHEDULE PERMISSIONS:";
+        foreach ($permissions as $permission) {
+            $hasPermission = $user->hasPermission($permission);
+            $status = $hasPermission ? '✅ YES' : '❌ NO';
+            $output[] = "- {$permission}: {$status}";
+        }
+        $output[] = "";
+
+        // Check if required data exists
+        $output[] = "REQUIRED DATA CHECK:";
+        $shiftsCount = \App\Models\Shift::active()->count();
+        $officesCount = \App\Models\Office::active()->count();
+        $usersCount = \App\Models\User::whereHas('employee')->count();
+
+        $output[] = "- Active Shifts: {$shiftsCount}";
+        $output[] = "- Active Offices: {$officesCount}";
+        $output[] = "- Users with Employee records: {$usersCount}";
+        $output[] = "";
+
+        // Test route access
+        $output[] = "ROUTE ACCESS TEST:";
+        $canAccessCreate = $user->hasPermission('schedules.create');
+        $output[] = "- Can access /schedules/create: " . ($canAccessCreate ? '✅ YES' : '❌ NO');
+
+        if (!$canAccessCreate) {
+            $output[] = "";
+            $output[] = "SOLUTION:";
+            $output[] = "User needs 'schedules.create' permission.";
+            $output[] = "This permission should be assigned to roles like:";
+            $output[] = "- Admin, HRD, HR, Manager";
+        }
+
+        return '<pre>' . implode("\n", $output) . '</pre>';
+    })->name('test.user-schedule-permissions');
+
+    // Quick fix for schedule permissions
+    Route::get('/fix/schedule-permissions', function() {
+        $output = [];
+        $output[] = "=== FIXING SCHEDULE PERMISSIONS ===";
+
+        try {
+            // Get current user
+            $user = auth()->user();
+            $output[] = "Current User: " . $user->full_name;
+
+            // Check if permissions exist
+            $permissions = [
+                'schedules.view',
+                'schedules.create',
+                'schedules.edit',
+                'schedules.delete',
+                'schedules.approve'
+            ];
+
+            $output[] = "\nChecking if permissions exist...";
+            foreach ($permissions as $permissionName) {
+                $permission = \App\Models\Permission::where('name', $permissionName)->first();
+                if (!$permission) {
+                    $permission = \App\Models\Permission::create([
+                        'name' => $permissionName,
+                        'display_name' => ucfirst(str_replace('.', ' ', $permissionName)),
+                        'module' => 'schedules',
+                        'description' => 'Permission to ' . str_replace('.', ' ', $permissionName) . ' schedules'
+                    ]);
+                    $output[] = "✅ Created permission: {$permissionName}";
+                } else {
+                    $output[] = "✅ Permission exists: {$permissionName}";
+                }
+            }
+
+            // Get or create roles that should have schedule permissions
+            $roleNames = ['Admin', 'HRD', 'HR', 'Manager'];
+            $output[] = "\nAssigning permissions to roles...";
+
+            foreach ($roleNames as $roleName) {
+                $role = \App\Models\Role::where('name', $roleName)->first();
+                if ($role) {
+                    $permissionObjects = \App\Models\Permission::whereIn('name', $permissions)->get();
+                    $role->permissions()->syncWithoutDetaching($permissionObjects);
+                    $output[] = "✅ Assigned schedule permissions to role: {$roleName}";
+                } else {
+                    $output[] = "⚠️ Role not found: {$roleName}";
+                }
+            }
+
+            // Check current user's roles and assign if needed
+            $output[] = "\nChecking current user roles...";
+            $userRoles = $user->roles()->pluck('name')->toArray();
+            $output[] = "Current user roles: " . implode(', ', $userRoles);
+
+            if (empty($userRoles)) {
+                // Assign HRD role to current user if no roles
+                $hrdRole = \App\Models\Role::where('name', 'HRD')->first();
+                if ($hrdRole) {
+                    $user->roles()->attach($hrdRole->id, [
+                        'assigned_at' => now(),
+                        'is_active' => true
+                    ]);
+                    $output[] = "✅ Assigned HRD role to current user";
+                } else {
+                    $output[] = "❌ HRD role not found";
+                }
+            }
+
+            $output[] = "\n=== PERMISSION FIX COMPLETED ===";
+            $output[] = "You can now try accessing /schedules/create";
+
+        } catch (\Exception $e) {
+            $output[] = "❌ Error: " . $e->getMessage();
+        }
+
+        return '<pre>' . implode("\n", $output) . '</pre>';
+    })->name('fix.schedule-permissions');
+
     // Alternative routes if main routes don't work
     Route::get('/periods', [PayrollController::class, 'periods'])->name('periods.index');
     Route::get('/periods/create', [PayrollController::class, 'createPeriod'])->name('periods.create');

@@ -379,7 +379,7 @@ class PayrollController extends Controller
 
         // This would generate a PDF slip
         // For now, return a view
-        return view('payroll.slip-pdf', compact('payroll'));
+        return view('payroll.slip-pdf-new', compact('payroll'));
     }
 
     public function exportReport(Request $request)
